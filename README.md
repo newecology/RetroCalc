@@ -13,6 +13,8 @@ A Building contains:
 * Domestic Hot Water (DHW) Systems: DHWsystems, DHWtanks, DHWpipesMechRoom
 * End Uses: Appliances, PlumbingFixtures
 * Environmental Inputs: Solar gains, internal gains
+# View Architecture Diagram
+[View system architecture diagram on diagrams.net](https://app.diagrams.net/#Wb!1BT1CzIKA0W4NNPtvamtEsLCsXKENnJHiiKqG-uknUfzUayUV16iQbTUJK23fBWJ%2F01IKS5YVAIKDZFAS3H5VGJVKTXKD2GM3MK#%7B%22pageId%22%3A%22jWfv4X7doiBbksh0aBEH%22%7D)
 # The system includes built-in support for:
 * Energy Conservation Measures (ECMs): Each model component (e.g., Solar, PlumbingFixture, Heating) can be associated with an EcmID, enabling simulation and comparison of different retrofit strategies.
 * Baseline & Calibrated Models: Each data record supports Baseline and Calibrated flags, allowing for before-and-after analysis. This structure enables calibration against real-world performance data or measurement & verification studies.
