@@ -13,14 +13,13 @@ A Building contains:
 * Domestic Hot Water (DHW) Systems: DHWsystems, DHWtanks, DHWpipesMechRoom
 * End Uses: Appliances, PlumbingFixtures
 * Environmental Inputs: Solar gains, internal gains
-The system includes built-in support for:
+# The system includes built-in support for:
 * Energy Conservation Measures (ECMs): Each model component (e.g., Solar, PlumbingFixture, Heating) can be associated with an EcmID, enabling simulation and comparison of different retrofit strategies.
 * Baseline & Calibrated Models: Each data record supports Baseline and Calibrated flags, allowing for before-and-after analysis. This structure enables calibration against real-world performance data or measurement & verification studies.
 # Installing on MATLAB
-To use Retrocalc, you'll need the current version of MATLAB R2022b or newer, this can be downloaded from
-
-# File Structure
-
+To install Retrocalc, simply clone the GitHub repository to your local machine using git clone, then open the RetroCalc.prj file in MATLAB. This will automatically set the project path and environment. Make sure that your input files—such as the weather station metadata (weather_metadata.csv) and your building data Excel file—are located in the project directory or properly referenced in your script. No additional setup is required beyond having MATLAB (R2022b or later) and the required toolboxes installed.
+# How it works
+Retrocalc uses Excel input files to gather building information, utility history, and system details, which are then processed through MATLAB classes to model energy and water usage. The tool matches each building to a nearby weather station using city and state inputs, applies climate-appropriate assumptions, and calibrates results against actual utility bills. Outputs include detailed baseline usage, retrofit savings estimates, and projections for cost, carbon, and electrification impacts—making it practical for large-scale multifamily decarbonization planning.
 
 
   
