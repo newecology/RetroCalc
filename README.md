@@ -38,7 +38,7 @@ The ability to adjust the interactivity of energy conservation measures (ECMs) a
     a.  This will automatically set the project path and environment.
 4.  
 
-# How it works
+### How it works
 
 Retrocalc uses Excel input files to gather building information, utility history, and system details, which are then processed through MATLAB classes to model energy and water usage. The tool matches each building to a nearby weather station using city and state inputs, applies climate-appropriate assumptions, and calibrates results against actual utility bills. Outputs include detailed baseline usage, retrofit savings estimates, and projections for cost, carbon, and electrification impacts—making it practical for large-scale multifamily decarbonization planning.
 
