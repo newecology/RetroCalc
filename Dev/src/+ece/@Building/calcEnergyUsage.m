@@ -1,0 +1,143 @@
+function calcEnergyUsage(obj)
+
+% This function sums up usage of gas, oil, and propane from heating, DHW,
+% and any gas using appliances. Other fuels could be added, such as district
+% steam, diesel fuel, or wood.
+% Add total building electric use as the first line of the outuput table.
+% Building electric use hase been summed in the ElectricUsageTable.
+
+energy12 = zeros(5, 13);
+
+% Total building electric usage for 12 months.
+energy12(1, 1:12) = table2array(obj.ElectricUsageTable(end, 2:13));
+
+% Space heating fuel use
+    heatGas12_therms = obj.HeatFuelTable{obj.HeatFuelTable.HeatingFuelType == ...
+        "Gas_therms", 2:13};
+    heatOil12_gallons = obj.HeatFuelTable{obj.HeatFuelTable.HeatingFuelType == ...
+        "HeatingOil_gallons", 2:13};
+    heatPropane12_gallons = obj.HeatFuelTable{obj.HeatFuelTable.HeatingFuelType == ...
+        "Propane_gallons", 2:13};
+
+% DHW fuel use
+    DHWgas12_therms = obj.DHWfuelTable{obj.DHWfuelTable.DHWfuelType == ...
+        "Gas_therms", 2:13};
+    DHWoil12_gallons = obj.DHWfuelTable{obj.DHWfuelTable.DHWfuelType == ...
+        "HeatingOil_gallons", 2:13};
+    DHWpropane12_gallons = obj.DHWfuelTable{obj.DHWfuelTable.DHWfuelType == ...
+        "Propane_gallons", 2:13};
+
+% Appliance fuel use
+   applGas12_therms = table2array(obj.ApplianceEnergyTable12(2, :));
+   % Add line for appliances operating on propane  
+   applPropane12_gallons = zeros(1, 12);
+
+% Add the usage for each fuel type and make a table with monthly and annual
+% totals. Bottom row of the table sums the kBtu of all the energy types.
+BuildingEnergyUse = ["Electricity_kWh"; "Gas_therms"; "HeatingOil_gallons"; ...
+    "Propane_gallons"; "Totals_kBtu"];
+energy12(2:4, 1:12) = [heatGas12_therms + DHWgas12_therms + applGas12_therms; ...
+    heatOil12_gallons + DHWoil12_gallons; heatPropane12_gallons + ...
+    DHWpropane12_gallons + applPropane12_gallons];
+energy12(end, :) = energy12(1, :) * 3413/1000 + energy12(2, :) * 100 + ...
+energy12(3, :) * 138500/1000 + energy12(4, :) * 91500/1000;
+energy12(:, 13) = sum(energy12(:, 1:12), 2);
+
+usageTable = array2table(energy12, 'VariableNames', {'Jan', 'Feb', 'Mar', 'Apr', ...
+    'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'AnnualTotals'});
+usageTable = addvars(usageTable, BuildingEnergyUse, 'Before', 'Jan');
+
+% Write table to building.
+obj.BuildingEnergyUsageTable = usageTable;
+
+% Make a table of the key parameters or statistics that are used for
+% calibration and for comparing one package to another. Call it runStats.
+% All numbers are per year.
+
+%1 electricity_kWh        Total electricity use, kWh
+%2 gas_Therms             Total gas use, therms
+%3 oil_Gallons            Total oil use, gallons
+%4 propane_Gallons        Total propane use, gallons
+%5 water_Gallons          Total water use, gallons
+%6 EUI_kBtuFt2            Energy use index, kBtu/ft2
+%7 cost                   Total cost of all utilities
+%8 CO2e_kgFt2             CO2 equivalent emissions, kg / ft2 floor area
+%9 water_GpdBrRes         Residential water use, gpd/bedroom (excludes irrigation, cooling tower, etc.)
+%10 water_GallonsNonRes   Water use for irrigation, cooling tower, etc., gallons
+%11 spaceHeat_kWh         Electricity use for space heat, kWh
+%12 spaceHeatFuel_kBtu    Gas, oil, or propane use for space heating, kBtu
+%13 spaceHeat_kBtuFt2     EUI for space heating only, kBtu/ft2
+%14 spaceCooling_kBtuFt2  EUI for space cooling only, kBtu/ft2
+%15 DHW_kWh               Electricity use for domestic hot water, kWh
+%16 DHWfuel_kBtu          Gas, oil, or propane use for DHW, kBtu
+%17 DHW_kBtuFt2           EUI for DHW only, kBtu/ft2
+%18 nonHVAC_kBtuFt2       Electricity for lights/plug loads/appliances/fans/pumps (no heating, cooling, DHW)
+%19 applianceFuel_kBtu    Gas or propane use for appliances, kBtu (excludes electricity)
+
+runStats = zeros(19,1);
+area = obj.BldgArea_ft2(1);
+numBR = sum(obj.BldgNumberOfBedrooms .* [1, 2, 3, 4]);
+runStats(1) = obj.BuildingEnergyUsageTable.AnnualTotals...
+    (obj.BuildingEnergyUsageTable.BuildingEnergyUse == "Electricity_kWh");
+runStats(2) = obj.BuildingEnergyUsageTable.AnnualTotals...
+    (obj.BuildingEnergyUsageTable.BuildingEnergyUse == "Gas_therms");
+runStats(3) = obj.BuildingEnergyUsageTable.AnnualTotals...
+    (obj.BuildingEnergyUsageTable.BuildingEnergyUse == "HeatingOil_gallons");
+runStats(4) = obj.BuildingEnergyUsageTable.AnnualTotals...
+    (obj.BuildingEnergyUsageTable.BuildingEnergyUse == "Propane_gallons");
+runStats(5) = obj.WaterUsageTable.Annual(obj.WaterUsageTable.waterGallons == "Totals");
+runStats(6) = obj.BuildingEnergyUsageTable.AnnualTotals...
+    (obj.BuildingEnergyUsageTable.BuildingEnergyUse == "Totals_kBtu") / area;
+runStats(7) = runStats(1) * ece.Site.CostOfElectricity + ...
+    runStats(2) * ece.Site.CostOfGas + ...
+    runStats(3) * ece.Site.CostOfOil + ...
+    runStats(4) * ece.Site.CostOfPropane + ...
+    runStats(5) * ece.Site.CostOfWater;
+runStats(8) = (runStats(1) * ece.Site.CarbonEqValueElectricity_kgPerkWh + ...
+    runStats(2) * ece.Site.CarbonEqValueGas_kgPerTherm + ...
+    runStats(3) * ece.Site.CarbonEqValueOil_kgPerGallon + ...
+    runStats(4) * ece.Site.CarbonEqValuePropane_kgPerGallon) / area;
+runStats(10) = obj.WaterUsageTable.Annual(obj.WaterUsageTable.waterGallons == "Irrigation") + ...
+    obj.WaterUsageTable.Annual(obj.WaterUsageTable.waterGallons == "CoolingTower") +...
+    obj.WaterUsageTable.Annual(obj.WaterUsageTable.waterGallons == "Other");
+runStats(9) = (runStats(5) - runStats(10)) / ...
+    sum(obj.BldgNumberOfBedrooms .* [1, 2, 3, 4]) / 365;
+runStats(11) = obj.HeatFuelTable.AnnualTotals(obj.HeatFuelTable.HeatingFuelType == ...
+    "Electricity_kWh");
+runStats(12) = obj.HeatFuelTable.AnnualTotals(obj.HeatFuelTable.HeatingFuelType == ...
+    "TotalEnergy_kBtu") - (runStats(11) * 3413/1000);
+runStats(13) = obj.HeatFuelTable.AnnualTotals(obj.HeatFuelTable.HeatingFuelType == ...
+    "TotalEnergy_kBtu") / area;
+runStats(14) = obj.ElectricUsageTable.annualTotals(obj.ElectricUsageTable.electricLoadskWh == ...
+    "space cooling") * 3413/1000 / area;
+runStats(15) = obj.DHWfuelTable.Annual(obj.DHWfuelTable.DHWfuelType == ...
+    "Electricity_kWh");
+runStats(16) = obj.DHWfuelTable.Annual(obj.DHWfuelTable.DHWfuelType == ...
+    "TotalEnergy_kBtu") - (runStats(15) * 3413/1000);
+runStats(17) = obj.DHWfuelTable.Annual(obj.DHWfuelTable.DHWfuelType == ...
+    "TotalEnergy_kBtu") / area;
+HVACelecMask = obj.ElectricUsageTable.electricLoadskWh == "DHW" | ...
+    obj.ElectricUsageTable.electricLoadskWh == "space heating" | ...
+    obj.ElectricUsageTable.electricLoadskWh == "space cooling";
+HVAC_kWh = sum(obj.ElectricUsageTable.annualTotals .* HVACelecMask);
+nonHVAC_kWh = obj.ElectricUsageTable.annualTotals(obj.ElectricUsageTable.electricLoadskWh == ...
+    "monthly totals") - HVAC_kWh;
+runStats(18) = nonHVAC_kWh *3413/1000 / area;
+runStats(19) = obj.ApplianceResultsTable.gasUse_therms...
+    (obj.ApplianceResultsTable.applianceType == "Totals") * 100;
+
+% Check. Total kBtu/ft2 should equal the sum of the parts.
+% Appliance fuel has to be converted to kBtu/ft2.
+check = runStats(6) - sum([runStats(13), runStats(14), runStats(17), ...
+    runStats(18), (runStats(19) / area)]);
+
+runStatsTable = table(runStats, 'VariableNames', {'KeyParameters'}, 'RowNames', ...
+    {'electricity_kWh', 'gas_Therms', 'oil_Gallons', 'propane_Gallons', ...
+    'water_Gallons', 'EUI_kBtu_Ft2', 'cost_Dollars', 'CO2e_kgFt2', 'water_GpdBrRes', ...
+    'water_GallonsNonRes', 'spaceHeat_kWh', 'spaceHeatFuel_kBtu', 'spaceHeat_kBtuFt2', ...
+    'spaceCooling_kBtuFt2', 'DHW_kWh', 'DHWfuel_kBtu', 'DHW_kBtuFt2', 'nonHVAC_kBtuFt2', ...
+    'applianceFuel_kBtu'});
+
+obj.RunStatsTable = runStatsTable;
+
+end  % function statement
