@@ -38,13 +38,13 @@ The ability to adjust the interactivity of energy conservation measures (ECMs) a
     a.  This will automatically set the project path and environment.
 4.  
 
-### How it works
-
-Retrocalc uses Excel input files to gather building information, utility history, and system details, which are then processed through MATLAB classes to model energy and water usage. The tool matches each building to a nearby weather station using city and state inputs, applies climate-appropriate assumptions, and calibrates results against actual utility bills. Outputs include detailed baseline usage, retrofit savings estimates, and projections for cost, carbon, and electrification impacts—making it practical for large-scale multifamily decarbonization planning.
-
 # Architecture
 
 This software is written in MATLAB and uses a modular, object-oriented architecture in MATLAB. RetroCalc is designed to model the energy and water usage of a building based upon the energy flows through each building component and their system interactions. Each building system, e.g., space conditioning, ventilation, water heating, and appliances, is modeled as a distinct class, making the framework highly extensible, testable, and maintainable.
+
+### How it works
+
+Retrocalc uses Excel input files to gather building information, utility history, and system details, which are then processed through MATLAB classes to model energy and water usage. The tool matches each building to a nearby weather station using city and state inputs, applies climate-appropriate assumptions, and calibrates results against actual utility bills. Outputs include detailed baseline usage, retrofit savings estimates, and projections for cost, carbon, and electrification impacts—making it practical for large-scale multifamily decarbonization planning.
 
 ## Application Data Flow
 
