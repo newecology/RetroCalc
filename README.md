@@ -34,20 +34,11 @@ The ability to adjust the interactivity of energy conservation measures (ECMs) a
 
 1.  Install [MATLAB](https://www.mathworks.com/products/matlab.html) (R2022b or later)
 2.  Clone the RetroCalc GitHub repository to your local machine
-3.  Open the RetroCalc.prj file from within MATLAB
-    a.  This will automatically set the project path and environment.
-4.  All the input files are kept in `..tests/testdata directory`
-    a.  `buildingInputs.xlsx`contains the basic inputs to the building used in both Level 2 and the HEA
-    b.  `calcInputs.xlsx` contains all the input to be used for the Level 2 portion of the code.
-    c.  `utilityInputs.xlsx` contains all the inputs from the utility meter data to be used for the HEA.
-    d.  `historicalDDInputs.xlsx` contains the degree days data to be used for the HEA portion of the code
-5.  The script `SetupSite.m`in `..src/+ece/` contains the code to run the HEA and the L2 scripts.
-6.  The commands `site.computeBuildingUtilityUsages()` and `site.computeHEA()` will do the HEA after all the inputs are gathered in the excel files and the file paths are set.
-7.  Similarly, `ece.Building.runModules(fileName, config)` will run the L2 calculations.
-    a.  `config` sets the option for one of the following run modes:
-        i.  Loading the inputs
-        ii. Running the calculations
-        iii. Displaying the summary results.
+3.  Open the RetroCalc.prj file from within MATLAB. This will automatically set the project path and environment.
+5.  All the input files are kept in `..tests/testdata directory`. `buildingInputs.xlsx`contains the basic inputs to the building used in both Level 2 and the HEA. `calcInputs.xlsx` contains all the input to be used for the Level 2 portion of the code. `utilityInputs.xlsx` contains all the inputs from the utility meter data to be used for the HEA. `historicalDDInputs.xlsx` contains the degree days data to be used for the HEA portion of the code
+6.  The script `SetupSite.m`in `..src/+ece/` contains the code to run the HEA and the L2 scripts.
+7.  The commands `site.computeBuildingUtilityUsages()` and `site.computeHEA()` will do the HEA after all the inputs are gathered in the excel files and the file paths are set.
+8.  Similarly, `ece.Building.runModules(fileName, config)` will run the L2 calculations. `config` sets the option for one of the following run modes: Loading the inputs; Running the calculations; Displaying the summary results.
 
 # Architecture
 
