@@ -1,8 +1,8 @@
 # RetroCalc
 
-A scalable, ASHRAE Level 2-compliant, energy/water modeling, and decarbonization software focused on retrofitting large multifamily buildings.
+A scalable, ASHRAE Level 2-compliant, energy, water, and decarbonization modeling software focused on retrofitting large multifamily buildings.
 
-# Background
+## Background
 
 RetroCalc, developed by New Ecology Inc. (NEI), is an innovative energy modeling tool designed specifically for decarbonizing multifamily buildings at scale. Drawing on NEI’s 25 years of experience in multifamily retrofits, RetroCalc combines detailed energy and water modeling with an intuitive, user- friendly functionality. This tool provides technical assistance (TA) providers with the rigorous energy and cost analysis needed to achieve successful decarbonization, without the time and complexity typically required by traditional modeling software.
 
@@ -40,18 +40,147 @@ From the user perspective, there are discrete steps throughout the process of us
 
 ## Data Structure
 
-The top level of the architecture has the Site Class which includes the Historical Energy Analysis (HEA) class that is the starting point for analysis and calculations. It holds annual and monthly utility usage and cost data. The Building Class is used both in Site and HEA, which is responsible for holding key properties like Area and volume of a building. Number of occupants and units, heating and cooling set points, Weather and solar data. A Building contains:
+Buildings are complex systems with many interrelated components. How these components function within the context of their building determines the overall energy and carbon outcomes. To properly organize and track the interactions between a building’s different components RetroCalc uses classes that define the objects of a building. This is a traditional object-oriented programming approach. The [RetroCalc unified modeling language (UML) diagram](retroCalcUML.pdf) that visually represents this system. The UML diagram provides the full details of all data flow and entry. Below we will define the different classes and their interactions to give them greater context.
+
+### Site Class
+
+The site class exists in order to aggregate energy data from multiple buildings and properly apportion utilities that serve multiple buildings. This is an important capability in larger developments that contain multiple buildings and could have a central mechanical room. The class contains the location of the site and manages the HEA and level 2 Class (level2Calc). The site is managed by the analysis class.
+
+### Analysis Class
+
+The analysis class manages site objects whether there is one or multiple, and it exists to organize and validate energy data.
+
+### Utility Class
+
+This organizes the utility data input by the user. These different energy sources for the use of gas, water, and electricity are then used by HEA for analysis and then model calibration.
+
+### HEA Class
+
+This class allows for the historical energy analysis to be completed which is then used for calibration of the level 2 model. The HEA is passed through the Building class and to the level 2 class for calibration. HEA is able to calculate the total energy consumption, efficiency metrics, and carbon emissions.
+
+### Building Class
+
+The building class is a central artery within RetroCalc communicates the information between a large variety of classes that describe the different systems that make up a building. The building class focuses on a single structure within a site. The classes that Building obtains energy information from include the following with some examples of objects in those classes:
+
+-   Appliances \| Refrigerator, Stove, Washer, Dryer
+-   Spaces \| Residential, Hallway, Stairwell
+-   Ventilation \| Exhaust fans, Energy recovery ventilator
+-   OpaqueSurfaces \| Insulated walls, Roof
+-   Glazing \| Double-pane windows
+-   SlabOnGrade \| Concrete slab with no basement
+-   BelowGradeSurfaces \| basement walls
+-   PlumbingFixtures \| Shower head, Kitchen sink faucet
+-   DHWpipesMechRoom \| Domestic hot water piping within the mechanical room
+-   DHWtanks \| Domestic hot water tank
+-   DHWsystems \| Domestic hot water boiler
+-   Fans \| Bath exhaust fan
+-   Pumps \| Heating circulator pumps
+-   Heating \| Boiler, heat pump
+-   Cooling \| Air-conditioner
+
+These classes will be further detailed below and their data is input by the user from building takeoffs.
+
+### Appliances Class
+
+The Appliances class represents energy-consuming devices within a Building, such as refrigerators, ovens, and washing machines. This class is necessary for tracking energy use from household or commercial devices, contributing to overall electricity consumption calculations.
+
+### Spaces Class
+
+The Spaces class represents the unique areas inside of a building and their associated typical occupant usage profiles. These spaces have their own properties for conditioning setpoints, lighting, etc.
+
+### Ventilation Class
+
+The Ventilation class describes the airflow systems that regulate indoor air quality. This class measures the monthly average flow of the ventilation, to be used in the building class.
+
+### OpaqueSurfaces Class
+
+The OpaqueSurfaces class models non-transparent building elements, such as walls and roofs. It is composed within Building and plays a crucial role in thermal insulation and heat retention.
+
+### Glazing Class
+
+The Glazing class represents transparent building elements like windows and glass facades. It is managed by the Building class, contributing to daylighting and heat gain calculations.
+
+### SlabOnGrade Class
+
+The SlabOnGrade class models floor surfaces that are in direct contact with the ground. It is passed up to Building and ensures that heat transfer through the floor is accounted for in thermal modeling.
+
+### BGSurfaces Class
+
+The below grade surfaces class contains information about any basement walls, their insulation, and soil composition, to pass back to the Building class.
+
+### PlumbingFixtures Class
+
+The PlumbingFixtures class includes components such as sinks, toilets, and showers. It is composed within Building and acts as an interface for these fixtures. This class is necessary for tracking water consumption and estimating energy use for heating water.
+
+### DHWpipesMechRoom Class
+
+This class specifies the DHW piping systems in the buildings mechanical room. The class is essential for modeling heat loss in hot water distribution and optimizing insulation strategies.
+
+### DHWtanks Class
+
+The DHWtanks class includes information about the water storage tanks used in domestic hot water systems within a building. The purpose of the class is to evaluate energy storage efficiency and system sizing.
+
+### DHWsystems Class
+
+The DHWsystems class represents both the potable water system in a building. It includes hot and cold water and is crucial for calculating water heating energy demand. It contains information about the water heating system and its efficiency.
+
+### Fans Class
+
+The Fans class models air circulation devices used within a building. This class is necessary for tracking energy consumption related to air movement and ensuring proper ventilation.
+
+### Pumps Class
+
+The Pumps class represents the fluid movement devices within a Building, which would be used for heating, cooling, and water distribution. This class is useful for understanding energy usage in fluid transport systems.
+
+### System Class
+
+It is an interface class that includes the heating and cooling classes. These classes can’t exist independently, and therefore the system class unifies them into one class.
+
+### Heating Class
+
+The Heating class represents the heating system within a building. It is also implemented in the System class, ensuring it follows a standardized structure for climate control. This class is essential for modeling indoor heat distribution and energy consumption.
+
+### Cooling Class
+
+The Cooling class represents the cooling system within a building. It is also implemented in the System class, maintaining the standardized structure. This class is necessary for assessing cooling loads and energy demand.
+
+### References Class
+
+The References Class serves as a data repository for storing and retrieving standard reference values used in benchmarking or validation processes. It ensures that predefined values or industry standards are accessible for calculations.
+
+### Weather Class
+
+The Weather class provides environmental data such as temperature, humidity, and solar radiation, which are crucial for energy modeling and performance analysis. It interacts with Building to adjust energy demand based on climate conditions.
+
+### Solar Class
+
+The Solar class models solar energy systems, including photovoltaic panels or solar water heating. It is essential for calculating renewable energy contributions to a building’s total energy consumption.
+
+### Enumeration Classes
+
+The system includes several enumeration (enum) classes that define categorical values for various components. These enum classes improve data organization, enforce constraints, and facilitate consistency across system models.
+
+-   **FuelType** specifies energy sources such as electricity, natural gas, or solar power, ensuring consistency across heating, cooling, and appliance models.
+
+-   **VentilationType** categorizes airflow systems, distinguishing between mechanical, natural, or hybrid ventilation methods.
+
+-   **WindowType** defines glazing characteristics, including single-pane, double-pane, or low-emissivity (Low-E) windows, crucial for thermal performance analysis.
+
+-   **SurfaceType** differentiates between walls, roofs, and floors, providing a structured way to classify building envelope components.
+
+-   **PumpType** and **FanType** categorize different mechanical systems used in HVAC and plumbing applications, helping define performance parameters based on standardized system types.
 
 -   Mechanical Systems:
+
     -   Space HeatCool, Airmovers, Pumps
+
 -   Envelope Components:
+
     -   OpaqueSurfaces, GlazedSurfaces, BelowGradeSurfaces, SlabOnGrade
+
 -   Utilities: Electricity, Gas, Water - Domestic Hot Water (DHW) Systems: DHWsystems, DHWtanks, DHWpipesMechRoom - End Uses: Appliances, PlumbingFixtures
+
 -   Environmental Inputs: Solar gains, internal gains
-
-# View Architecture Diagram
-
-[View system architecture diagram on diagrams.net](https://app.diagrams.net/#Wb!1BT1CzIKA0W4NNPtvamtEsLCsXKENnJHiiKqG-uknUfzUayUV16iQbTUJK23fBWJ%2F01IKS5YVAIKDZFAS3H5VGJVKTXKD2GM3MK#%7B%22pageId%22%3A%22jWfv4X7doiBbksh0aBEH%22%7D)
 
 # The system includes built-in support for:
 
