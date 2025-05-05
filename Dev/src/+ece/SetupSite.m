@@ -1,6 +1,4 @@
 %% Site Setup Example (And also HEA)
-% Michael Sullivan
-% 3/4/2025
 
 %% Prepare Input Data and Files
 % Use the new schema for test data loading from the test file.
