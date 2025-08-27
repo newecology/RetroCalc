@@ -35,7 +35,7 @@ The ability to adjust the interactivity of energy conservation measures (ECMs) a
 1.  Install [MATLAB](https://www.mathworks.com/products/matlab.html) (R2022b or later)
 2.  Clone the RetroCalc GitHub repository to your local machine
 3.  Open the Retrocalc_openSource.prj file from within MATLAB. This will automatically set the project path and environment.
-5.  All the input files are kept in `..tests/testdata directory`. `buildingInputs.xlsx`contains the basic inputs to the building used in both Level 2 and the HEA. `calcInputs.xlsx` contains all the input to be used for the Level 2 portion of the code. `utilityInputs.xlsx` contains all the inputs from the utility meter data to be used for the HEA. `historicalDDInputs.xlsx` contains the degree days data to be used for the HEA portion of the code. The `weatherDataInputs.xlsx` should contain the TMY3/TMYx data for the location. Make sure the input templates of the excel files are followed.
+5.  All the input files are kept in `..tests/testdata directory`. `buildingInputs.xlsx`contains the basic inputs to the building used in both Level 2 and the HEA. `buildingL2Inputs.xlsx` contains all the input to be used for the Level 2 portion of the code. `utilityInputs.xlsx` contains all the inputs from the utility meter data to be used for the HEA. `historicalDDInputs.xlsx` contains the degree days data to be used for the HEA portion of the code. The `weatherDataInputs.xlsx` should contain the TMY3/TMYx data for the location. Make sure the input templates of the excel files are followed.
 6.  The script `SiteFullRun.m` in `..sandbox/runScripts/` contains the code to run the HEA and the L2 scripts. Modify the paths accordingly.
 
 # Architecture
