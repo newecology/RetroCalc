@@ -6,10 +6,19 @@
 *.mdlp binary
 *.mex* binary
 *.mlapp binary
+<<<<<<< HEAD
 *.mldatx binary
 *.mlproj binary
 *.mlx binary
 *.p binary
+=======
+*.mldatx binary merge=mlAutoMerge
+*.mlproj binary
+*.mlx binary
+*.p binary
+*.plprj binary
+*.sbproj binary
+>>>>>>> d1b307e8911ccd6729f073ada32d310964276266
 *.sfx binary
 *.sldd binary
 *.slreqx binary merge=mlAutoMerge
@@ -19,6 +28,12 @@
 *.slx binary merge=mlAutoMerge
 *.slxp binary
 
+<<<<<<< HEAD
+=======
+## MATLAB Project metadata files use LF line endings
+/resources/project/**/*.xml text eol=lf
+
+>>>>>>> d1b307e8911ccd6729f073ada32d310964276266
 ## Other common binary file types
 *.docx binary
 *.exe binary

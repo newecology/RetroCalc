@@ -31,3 +31,13 @@ codegen/
 
 # Cloud based storage dotfile
 .MATLABDriveTag
+<<<<<<< HEAD
+=======
+
+# buildtool cache folder
+.buildtool/
+
+# SimBiology backup files
+*.sbproj.backup
+*.sbproj.bak
+>>>>>>> d1b307e8911ccd6729f073ada32d310964276266
