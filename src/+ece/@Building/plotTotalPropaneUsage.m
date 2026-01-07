@@ -1,6 +1,6 @@
 function plotTotalPropaneUsage(obj, ax, showAccumulation)
 % plotTotalPropaneUsage: Method to plot the monthly Propane usage for a 
-% Building.
+% Building. 
 %   This method pulls the Propane usage for the building as derived from the
 %   HEA calculation and plots it over the 12 months of the year.
 %   Note: This method takes an input axes; if none exists a
@@ -66,14 +66,20 @@ end %endif
 %% Design Axes
 % Update the Axes layout and formatting to explain the plotted
 % data.
+
 % -- Axes Labels
-title(ax,"Building Total Monthly Propane Usage");
+title(ax,"Propane Usage - Total Monthly");
 xlabel(ax,"Month");
 ylabel(ax,"Usage (Gallons)");
 
 % -- Axis Style
 grid(ax,"on");
 axis(ax,"tight");
+ylim(ax,[0 inf]);
+% Set the y axis lower limit to zero, not the lowest y value. 
+% ylim manual
+% x = ylim;
+% ylim([0, x(2)]);
 
 % -- TickMark Styling
 % Show a tickmark at every data point (for every month).

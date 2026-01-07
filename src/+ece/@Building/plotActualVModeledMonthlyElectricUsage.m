@@ -30,7 +30,7 @@ end %endif
 
 %% Extract Data Vectors for Actual and Modeled
 % Acquire total actual Electric usage data from HEA (kWh)
-actualUsage = obj.MonthlyElectricProfile.Total;
+actualUsage = obj.MonthlyElectricProfile.Total_kWh;
 
 % Acquire total modeled Electric usage data from Level 2 (kwh)
 %   This table column has all 12 months + annual roll-up, so we
@@ -68,7 +68,7 @@ ylabel(ax,"Usage (Unit)");
 % -- Axis Style
 grid(ax,"on");
 axis(ax,"tight");
-
+ylim(ax,[0 inf]);
 % -- TickMark Styling
 % Show a tickmark at every data point (for every month).
 xticks(ax,timeDomain);

@@ -33,7 +33,7 @@ end %endif
 
 %% Extract Data Vectors for Building HEA Oil Usage
 % Pull from the corresponding Utility Monthly Profile
-totalUsage = obj.MonthlyOilProfile.Total;
+totalUsage = obj.MonthlyOilProfile.TotalGallons;
 
 %% Plot Data
 % Plot vectors to axes across a 12-month domain from January to
@@ -67,14 +67,14 @@ end %endif
 % Update the Axes layout and formatting to explain the plotted
 % data.
 % -- Axes Labels
-title(ax,"Building Total Monthly Oil Usage");
+title(ax,"Oil Usage - Total Monthly");
 xlabel(ax,"Month");
 ylabel(ax,"Usage (Gallons)");
 
 % -- Axis Style
 grid(ax,"on");
 axis(ax,"tight");
-
+ylim(ax,[0 inf]);
 % -- TickMark Styling
 % Show a tickmark at every data point (for every month).
 xticks(ax,timeDomain);

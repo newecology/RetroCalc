@@ -28,27 +28,26 @@ otherMonthly = (obj.OtherGal/12) .* ones(12,1);
 
 %% Align Irrigation and Cooling by Month
 % AdjustedUsageTable months may not be in the same order as the intended
-% distribution gallons, so shuffle them to match order of months.
+% distribution gallons, so arrange the monthly distribution to correspond with 
+% the starting month of the data.
 
-% Sort first 12 months from UsageTable
-[~,sortMask] = sort(obj.AdjustedUsageTable.Month(1:12));
-
-% Apply sort mask.
-irrigationMonthly = irrigationMonthly(sortMask);
-coolTowerMonthly = coolTowerMonthly(sortMask);
+startMonth = obj.AdjustedUsageTable.Month(1);
+irrigationMonthlyThisMeter = irrigationMonthly([startMonth:end 1:startMonth-1]);
+coolTowerMonthlyThisMeter = coolTowerMonthly([startMonth:end 1:startMonth-1]);
 
 %% Append Monthly Gallon Usages to Table
-% Enforce column vector and add N copies to table, where N is the
+% Transpose row to column vector and add N copies to table, where N is the
 % number of years of data in the utility.
+
 % Irrigation Gals
-obj.AdjustedUsageTable.IrrigationGals = repmat(irrigationMonthly,...
-    obj.NumberOfYears,1);
+obj.AdjustedUsageTable.IrrigationGals = repmat(irrigationMonthlyThisMeter,...
+    obj.NumberOfYears, 1);
 % CoolingTowerGals
-obj.AdjustedUsageTable.CoolingTowerGals = repmat(coolTowerMonthly,...
-    obj.NumberOfYears,1);
+obj.AdjustedUsageTable.CoolingTowerGals = repmat(coolTowerMonthlyThisMeter,...
+    obj.NumberOfYears, 1);
 % OtherGals
 obj.AdjustedUsageTable.OtherGals = repmat(otherMonthly,...
-    obj.NumberOfYears,1);
+    obj.NumberOfYears, 1);
 
 %% Compute and Append Residential Gallons
 % Water that is not used for Irrigation, Cooling, or Other is use for
@@ -57,6 +56,8 @@ residentialGallons = obj.AdjustedUsageTable.AdjGallons - ...
     obj.AdjustedUsageTable.IrrigationGals - ...
     obj.AdjustedUsageTable.CoolingTowerGals - ...
     obj.AdjustedUsageTable.OtherGals;
+
+% Create error message if residential gallons is less than zero.
 
 % Add to Table Column
 obj.AdjustedUsageTable.ResidentialGals = residentialGallons;

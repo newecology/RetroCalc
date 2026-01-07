@@ -9,13 +9,13 @@ classdef EnergySourceType < ece.enum.BaseList
         % Propane
         Propane             ("Propane")
         % Oil
-        HeatingOil          ("#2 Heating Oil")
-        % Wood
-        Wood                ("Wood")
-        % Diesel fuel
-        DieselFuel          ("Diesel Fuel")
-        % District steam
-        DistricSteam        ("District Steam")
+        HeatingOil          ("Heating Oil")
+        % % Wood
+        % Wood                ("Wood")
+        % % Diesel fuel
+        % DieselFuel          ("Diesel Fuel")
+        % % District steam
+        % DistricSteam        ("District Steam")
         % None
         None                ("None")
         

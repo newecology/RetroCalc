@@ -94,7 +94,8 @@ classdef Gas < ece.Utility
         % AdjustedUsageTable to incorporate and relevant inputs from the
         % containter structure (Site/Building) that has the utility in
         % question.
-        updateAdjustedUsageTable(obj,ddTbl);      
+        % updateAdjustedUsageTable(obj,ddTbl);
+        createAnalysisTable(obj, ddTable)
 
     end %methods (public)
 

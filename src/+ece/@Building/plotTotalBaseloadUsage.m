@@ -33,7 +33,7 @@ end %endif
 
 %% Extract Data Vectors for Building HEA Baseload Usage
 % Pull from the corresponding Utility Monthly Profile
-totalUsage = obj.MonthlyElectricProfile.Base;
+totalUsage = obj.MonthlyElectricProfile.Base_kWh;
 
 %% Plot Data
 % Plot vectors to axes across a 12-month domain from January to
@@ -75,7 +75,7 @@ ylabel(ax,"Usage (kWh");
 % -- Axis Style
 grid(ax,"on");
 axis(ax,"tight");
-
+ylim(ax,[0 inf]);
 % -- TickMark Styling
 % Show a tickmark at every data point (for every month).
 xticks(ax,timeDomain);

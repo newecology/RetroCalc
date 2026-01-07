@@ -100,6 +100,7 @@ classdef HeatCool < handle & matlab.mixin.Copyable
         %Getter funtion for the properties EffCurveHtg  and EffCurveClg ,
         % so that their values are automatically updated for each each object of the class
 
+        
         function value = get.HeatingEfficiencyCurve(obj)
             [value,~] = obj.calculateEfficiencies;
         end  %end function
@@ -179,9 +180,7 @@ classdef HeatCool < handle & matlab.mixin.Copyable
 
             % -- Convert Units
             % If input units is HSPF, convert to COP.
-            if (obj.HeatEffUnits == ece.enum.HeatingEfficiencyUnits.ASHP_HSPF)
-                obj.HeatEff = obj.HeatEff / 3.413;
-            end %endif
+
 
         end %Setter Function
 
@@ -211,11 +210,7 @@ classdef HeatCool < handle & matlab.mixin.Copyable
 
             end %endif
 
-            % -- Convert Units
-            % If input units is HSPF, convert to COP.
-            if (obj.HeatEffUnits == ece.enum.HeatingEfficiencyUnits.ASHP_HSPF)
-                obj.HeatEffUnits = ece.enum.HeatingEfficiencyUnits.averageCOP;
-            end %endif
+
 
 
         end %Setter Function
@@ -292,17 +287,6 @@ classdef HeatCool < handle & matlab.mixin.Copyable
 
             end %endif
 
-            % -- Convert Units
-            % If input units is a specific type, convert CoolEff.
-            isConvertableUnit = ismember(obj.CoolEffUnits,...
-                [ece.enum.CoolingEfficiencyUnits.EER,...
-                ece.enum.CoolingEfficiencyUnits.EER2,...
-                ece.enum.CoolingEfficiencyUnits.SEER,...
-                ece.enum.CoolingEfficiencyUnits.SEER2,...
-                ece.enum.CoolingEfficiencyUnits.IEER]);
-            if isConvertableUnit
-                obj.CoolEff = obj.CoolEff / 3.413;
-            end %endif
 
 
         end %Setter Function
@@ -333,27 +317,7 @@ classdef HeatCool < handle & matlab.mixin.Copyable
 
             end %endif
 
-            % -- Convert Units
-            % Convert any EER values in Btu/hour per Watt to COP. All cooling
-            % efficiencies will then be in COP, simplifying later calculations.
-            % If the user enters IPLV, it should be in COP units.
-            isConvertableUnit1 = ismember(obj.CoolEffUnits,...
-                [ece.enum.CoolingEfficiencyUnits.EER,...
-                ece.enum.CoolingEfficiencyUnits.EER2]);
-
-            isConvertableUnit2 = ismember(obj.CoolEffUnits,...
-                [ece.enum.CoolingEfficiencyUnits.SEER,...
-                ece.enum.CoolingEfficiencyUnits.SEER2,...
-                ece.enum.CoolingEfficiencyUnits.IEER]);
-
-            if isConvertableUnit1
-                obj.CoolEffUnits = ...
-                    ece.enum.CoolingEfficiencyUnits.ASHP_COP95F;
-            elseif isConvertableUnit2
-                obj.CoolEffUnits = ...
-                    ece.enum.CoolingEfficiencyUnits.averageCOP;
-            end %endif
-
+  
         end %Setter Function
 
 

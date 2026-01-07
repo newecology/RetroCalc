@@ -67,14 +67,14 @@ end %endif
 % Update the Axes layout and formatting to explain the plotted
 % data.
 % -- Axes Labels
-title(ax,"Building Total Monthly Gas Usage");
+title(ax,"Gas Usage - Total Monthly");
 xlabel(ax,"Month");
 ylabel(ax,"Usage (therms)");
 
 % -- Axis Style
 grid(ax,"on");
 axis(ax,"tight");
-
+ylim(ax,[0 inf]);
 % -- TickMark Styling
 % Show a tickmark at every data point (for every month).
 xticks(ax,timeDomain);

@@ -82,11 +82,8 @@ classdef Oil < ece.Utility
         % files.
         plotResults(obj)
 
-        % updateAdjustedUsageTable: Method to update columns in the
-        % AdjustedUsageTable to incorporate and relevant inputs from the
-        % containter structure (Site/Building) that has the utility in
-        % question.
-        updateAdjustedUsageTable(obj,ddTbl);      
+        % updateAdjustedUsageTable 
+        createAnalysisTable(obj, ddTable)
 
     end %methods (public)
 

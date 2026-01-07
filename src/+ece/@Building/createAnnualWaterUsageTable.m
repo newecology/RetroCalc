@@ -1,6 +1,6 @@
-function createAnnualWaterUsageTable(bldg,waterMeters,waterRatios)
+function createAnnualWaterUsageTable(bldg, waterMeters, waterRatios)
 %CREATEANNUALWATERUSAGETABLE Method to calculate the annual
-%electricity usage table for this building.
+% water usage table for this building.
 %   This method is provided an array of water meters and ratios from
 %   which the adjusted usage table is extracted and used to proportionally
 %   compute the usage for this building.
@@ -24,15 +24,16 @@ end %argblock
 numMeters = length(waterMeters);
 
 % Create Default Table for Accumulating Meter Results
-buildingUsageTbl = table('Size',[0,8],...
-    'VariableTypes',["string",repmat("double",1,7)],...
-    'VariableNames',["Property","Gallons","AdjGallons","IrrigationGals",...
-    "CoolingTowerGals","OtherGals","ResidentialGals","Cost"]);
+buildingUsageTbl = table('Size',[0,9],...
+    'VariableTypes',["string", repmat("double", 1, 8)],...
+    'VariableNames',["Property", "MeterCount", "Gallons", "AdjGallons", "IrrigationGals",...
+    "CoolingTowerGals", "OtherGals", "ResidentialGals", "Cost"]);
+numBldgUsageVariables = 9;
 
 % Create Default table for accumulating statistical results.
-buildingStatsTbl = table('Size',[2,8],...
-    'VariableTypes',["string",repmat("double",1,7)],...
-    'VariableNames',["Property","Gallons","AdjGallons", ...
+buildingStatsTbl = table('Size',[2,9],...
+    'VariableTypes',["string",repmat("double",1,8)],...
+    'VariableNames',["Property","MeterCount","Gallons","AdjGallons", ...
         "IrrigationGals","CoolingTowerGals","OtherGals", ...
         "ResidentialGals","Cost"]);
 
@@ -41,7 +42,7 @@ buildingStatsTbl.Property = ["Average";...
     "Fraction of Total"];
 
 % Set default nans
-buildingStatsTbl{:,2:end} = nan(2,7);
+buildingStatsTbl{:,2:end} = nan(2,8);
 
 
 %% Iterate Through Each Meter
@@ -64,12 +65,12 @@ for meterIdx = 1:numMeters
 
     %% Preallocate AnnualUsageTable for Individual Meters
     % This table is going to have 11 columns, and R rows of numeric
-    % information. The number of rows is essentially 3 + (numberOfYears).
+    % information. The number of rows is essentially 2 + (numberOfYears).
     % It will be preallocated using a NaN matrix, as that is the
     % default value for unfilled/unused cells.
-    nanMatrix = nan(wm.NumberOfYears,8);
+    nanMatrix = nan(wm.NumberOfYears, numBldgUsageVariables);
     meterUsageTbl = array2table(nanMatrix,...
-        "VariableNames",["Property","Gallons","AdjGallons", ...
+        "VariableNames",["Property","MeterCount","Gallons","AdjGallons", ...
         "IrrigationGals","CoolingTowerGals","OtherGals", ...
         "ResidentialGals","Cost"]);
 
@@ -86,10 +87,12 @@ for meterIdx = 1:numMeters
 
         % -- Assign Year (as Property)
         % Take the first year that shows up for the set of 12 values.
-        firstTwelveMonthsYears = year(...
-            wm.AdjustedUsageTable.StartDate(monthIndices));
+        firstTwelveMonthsYears = wm.AdjustedUsageTable.Year(monthIndices);
         meterUsageTbl.Property(yearIdx) = ...
             firstTwelveMonthsYears(1);
+
+        % MeterCount - Always equal to one when added.
+        meterUsageTbl.MeterCount(yearIdx) = 1;
 
         % -- Assign Column Values Per Year
         % Extract and compute sums.
@@ -125,16 +128,16 @@ for meterIdx = 1:numMeters
 
     %% Merge Into Building UsageTable by Year
     % Append new table underneath existing table.
-    tempTable = [buildingUsageTbl;meterUsageTbl];
+    tempTable = [buildingUsageTbl; meterUsageTbl];
 
     % Use varfun to assign new table.
     %   InputVariables: Vars to sum together.
     %   GroupingVariables: Vars to group by (ID column)
-    buildingUsageTbl = varfun(@sum,tempTable,...
+    buildingUsageTbl = varfun(@sum, tempTable,...
         "GroupingVariables","Property",...
-        "InputVariables",["Gallons","AdjGallons", ...
-        "IrrigationGals","CoolingTowerGals","OtherGals", ...
-        "ResidentialGals","Cost"]);
+        "InputVariables",["MeterCount", "Gallons", "AdjGallons", ...
+        "IrrigationGals", "CoolingTowerGals", "OtherGals", ...
+        "ResidentialGals", "Cost"]);
 
     % Clear Groupcount Column
     %   This column is added to show how rows are grouped.
@@ -146,18 +149,18 @@ for meterIdx = 1:numMeters
 
     %% Merge Averages into Building StatsTable
     % Set up names of columns that get averaged.
-    avgColNames = ["Gallons","AdjGallons", ...
-        "IrrigationGals","CoolingTowerGals","OtherGals", ...
-        "ResidentialGals","Cost"];
+    avgColNames = ["Gallons", "AdjGallons", ...
+        "IrrigationGals", "CoolingTowerGals", "OtherGals", ...
+        "ResidentialGals", "Cost"];
 
     % Calculate average for columns.
-    avgColVals = mean(meterUsageTbl{1:wm.NumberOfYears,avgColNames});
+    avgColVals = mean(meterUsageTbl{1:wm.NumberOfYears, avgColNames}, 1);
 
     % Apply average to 1st statistic row
-    buildingStatsTbl{1,avgColNames} = sum([...
-        buildingStatsTbl{1,avgColNames};...
+    buildingStatsTbl{1, avgColNames} = sum([...
+        buildingStatsTbl{1, avgColNames};...
         avgColVals],...
-        1,"omitmissing");
+        1, "omitmissing");
 
 end %forloop (meterIdx)
 
@@ -165,13 +168,12 @@ end %forloop (meterIdx)
 % The second row is for proportional usage, and only involves dividing the
 % average kWh into other usage columns.
 % Set up names of proportional columns
-propColNames = ["AdjGallons", ...
-    "IrrigationGals","CoolingTowerGals","OtherGals", ...
-    "ResidentialGals"];
+propColNames = ["AdjGallons", "IrrigationGals", ...
+    "CoolingTowerGals", "OtherGals", "ResidentialGals"];
 
 % Apply average to 2nd statistic row
-buildingStatsTbl{2,propColNames} = ...
-    buildingStatsTbl{1,propColNames} ./ ...
+buildingStatsTbl{2, propColNames} = ...
+    buildingStatsTbl{1, propColNames} ./ ...
     buildingStatsTbl.Gallons(1);
 
 
@@ -180,7 +182,7 @@ buildingStatsTbl{2,propColNames} = ...
 % building usage table.
 
 % Store into Utility
-bldg.AnnualWaterUsageTable = [buildingStatsTbl;buildingUsageTbl];
+bldg.AnnualWaterUsageTable = [buildingStatsTbl; buildingUsageTbl];
 
 end %function
 

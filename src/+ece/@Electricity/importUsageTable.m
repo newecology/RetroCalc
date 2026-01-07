@@ -29,11 +29,11 @@ useTbl = renamevars(useTbl,3,"Usage");
 
 %% Set Initial Input Directly to Raw Usage Table and Usage Table
 % Assign input directly to Raw and UsageTable property.
-elecUtil.RawUsageTable = useTbl;
+elecUtil.RawUsageTable = rmmissing(useTbl, 'DataVariables', useTbl.Properties.VariableNames);
 
 % The UsageTable will be further cleaned and sanitized as it is processed
 % going forward.
-elecUtil.AdjustedUsageTable = useTbl;
+elecUtil.AdjustedUsageTable = rmmissing(useTbl, 'DataVariables', useTbl.Properties.VariableNames);
 
 %% Correct Billing Periods in Table
 % If there are uneven billing periods that would skew the analysis, we need

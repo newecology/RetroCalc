@@ -2,7 +2,7 @@ function calculateSpaceHeatingEnergy(obj)
 %Calculates the total space heating losses and required
 % heating input energy of the building. Includes solar and internal gains.
 % Losses from conduction through envelope components, as well as due to
-% ventilation, infiltration etc.
+% ventilation, infiltration etc. Units in kBtu.
 
 %% Arguments Block
 arguments

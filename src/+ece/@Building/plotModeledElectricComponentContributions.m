@@ -40,15 +40,15 @@ end %endif
 % These values are rolled up inside the Building's Electric Usage Table,
 % which is populated as it moves through the Level 2 Calulculation.
 lightUsage = obj.ElectricUsageTable.Lights(1:12) + ...
-    obj.ElectricUsageTable.("Exterior Lights")(1:12);
-plugLoadUsage = obj.ElectricUsageTable.("Plug Loads")(1:12);
+    obj.ElectricUsageTable.("ExteriorLights")(1:12);
+plugLoadUsage = obj.ElectricUsageTable.("PlugLoads")(1:12);
 airmoverUsage = obj.ElectricUsageTable.Fans(1:12);
 pumpUsage = obj.ElectricUsageTable.Pumps(1:12);
 applianceUsage = obj.ElectricUsageTable.Appliances(1:12);
 dhwUsage = obj.ElectricUsageTable.DHW(1:12);
-heatUsage = obj.ElectricUsageTable.("Space Heating")(1:12);
-coolUsage = obj.ElectricUsageTable.("Space Cooling")(1:12);
-otherUsage = obj.ElectricUsageTable.("Other Elec")(1:12);
+heatUsage = obj.ElectricUsageTable.("SpaceHeating")(1:12);
+coolUsage = obj.ElectricUsageTable.("SpaceCooling")(1:12);
+otherUsage = obj.ElectricUsageTable.("OtherElec")(1:12);
 
 % Combine into a usage matrix, with each column as a usage.
 usageMatrix = [...

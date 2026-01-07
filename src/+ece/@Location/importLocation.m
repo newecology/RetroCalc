@@ -22,7 +22,7 @@ end %argblock
 validFile = isfile(dataSource);
 if ~validFile
     % Throw error that describes issues and returns.
-    error("Unable to load site HistDD data. Provided file path" + ...
+    error("Unable to load site Location data. Provided file path" + ...
         " ('" + excelFilePath + "') does not exist or is " + ...
         "not a valid file.");
 end %endif
@@ -31,7 +31,7 @@ end %endif
 % Get a list of all sheet names, then filter out histDD ones. We will
 % 
 sheetNames = sheetnames(dataSource);
-locMask = contains(sheetNames,"Location");
+locMask = contains(sheetNames,"Site");
 
 % Extract HistDD Sheet names and count.
 locSheetNames = sheetNames(locMask);

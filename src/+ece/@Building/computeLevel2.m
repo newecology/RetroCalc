@@ -3,7 +3,7 @@ function computeLevel2(bldg)
 %   A Level2 can be calculate from a Building using the mathematics within
 %   the calculation methods described by Henry.
 %
-%
+% 
 
 %% Argument Block
 arguments

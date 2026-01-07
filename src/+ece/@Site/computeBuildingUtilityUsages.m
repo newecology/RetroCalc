@@ -11,11 +11,7 @@ arguments
     site (1,1) ece.Site
 end %argblock
 
-%% TODO
-% TODO: This ABSOLUTELY requires HistoricalDDs to be imported in all cases.
-% Utilities can be imported alone, but Buildings requires all three.
-
-% NOTE: Also stop this from happening unless the Site has Meters AND
+% NOTE: Stop this from happening unless the Site has Meters AND
 % Buildings.
 
 %% Obtain Properties
@@ -29,19 +25,14 @@ histDDTable = site.Location.HistoricalDDTable;
 
 % Process Utility Usage Tables
 for em = 1:numel(site.ElectricMeters)
-    site.ElectricMeters(em).updateAdjustedUsageTable(histDDTable);
+    site.ElectricMeters(em).createAnalysisTable(histDDTable);
 end %forloop (electric meters)
 
-% Process Building Usage Tables
-for bd = 1:site.NumBuildings
-    % Annual Usage Table and Monthly Profile
-    site.Buildings(bd).createAnnualAndMonthlyElectricityUsageTable(...
-        site.ElectricMeters,...
-        site.BuildingElecRatios(:,bd),...
-        5);
-
-end %forloop (buildings)
-
+% Analyze the utility data to break out end uses where possible and develop 
+% usage for each building.
+numYearsToAvg = 5;
+site.Buildings.analyzeElectricity(site.ElectricMeters, site.BuildingElecRatios, ...
+    histDDTable, numYearsToAvg);
 
 %% Process Gas Utility and Building Usages
 % Set up adjusted use table for each gas utility, and then process each
@@ -49,18 +40,14 @@ end %forloop (buildings)
 
 % Process Utility Usage Tables
 for gm = 1:numel(site.GasMeters)
-    site.GasMeters(gm).updateAdjustedUsageTable(histDDTable);
+    site.GasMeters(gm).createAnalysisTable(histDDTable);
 end %forloop (gas meters)
 
-% Process Building Usage Tables
-for bd = 1:site.NumBuildings
-    % Annual Usage Table and Monthly Profile
-    site.Buildings(bd).createAnnualAndMonthlyGasUsageTable(...
-        site.GasMeters,...
-        site.BuildingGasRatios(:,bd),...
-        5);
-
-end %forloop (buildings)
+% Analyze the utility data to break out end uses where possible and develop 
+% usage for each building.
+numYearsToAvg = 5;
+site.Buildings.analyzeGas(site.GasMeters, site.BuildingGasRatios, ...
+    histDDTable, numYearsToAvg);
 
 %% Process Water Utility and Building Usages
 % Set up adjusted use table for each water utility, and then process
@@ -75,17 +62,16 @@ end %forloop (water meters)
 % Process Building Usage Tables
 for bd = 1:site.NumBuildings
     % Annual Usage Table
-    site.Buildings(bd).createAnnualWaterUsageTable(...
+    site.Buildings(bd).analyzeWater(...
         site.WaterMeters,...
         site.BuildingWaterRatios(:,bd));
-
-    % Monthly Profile
-    site.Buildings(bd).createWaterMonthlyProfile(...
-        site.WaterMeters,...
-        site.BuildingWaterRatios(:,bd));
+    % 
+    % % Monthly Profile
+    % site.Buildings(bd).createWaterMonthlyProfile(...
+    %     site.WaterMeters,...
+    %     site.BuildingWaterRatios(:,bd));
 
 end %forloop (buildings)
-
 
 %% Process Oil Utility and Building Usages
 % Set up adjusted use table for each oil utility, and then process each
@@ -93,36 +79,31 @@ end %forloop (buildings)
 
 % Process Utility Usage Tables
 for gm = 1:numel(site.OilMeters)
-    site.OilMeters(gm).updateAdjustedUsageTable(histDDTable);
+    site.OilMeters(gm).createAnalysisTable(histDDTable);
 end %forloop (gas meters)
 
-% Process Building Usage Tables
-for bd = 1:site.NumBuildings
-    % Annual Usage Table and Monthly Profile
-    site.Buildings(bd).createAnnualAndMonthlyOilUsageTable(...
-        site.OilMeters,...
-        site.BuildingOilRatios(:,bd),...
-        5);
-end %forloop (buildings)
+% Analyze the utility data to break out end uses where possible and develop 
+% usage for each building.
+site.Buildings.analyzeOil(...
+    site.OilMeters, ...
+    site.BuildingOilRatios, ...
+    histDDTable, ...
+    numYearsToAvg);
 
 %% Process Propane Utility and Building Usages
-% Set up adjusted use table for each gas utility, and then process each
-% Building's proportional AnnualPropaneUsageTable and MonthlyProfile.
+% Set up adjusted use table for each propane utility, and then process each
+% Building's AnnualPropaneUsageTable and MonthlyProfile.
 
 % Process Utility Usage Tables
-for gm = 1:numel(site.PropaneMeters)
-    site.PropaneMeters(gm).updateAdjustedUsageTable(histDDTable);
+for pm = 1:numel(site.PropaneMeters)
+    site.PropaneMeters(pm).createAnalysisTable(histDDTable);
 end %forloop (gas meters)
 
-% Process Building Usage Tables
-for bd = 1:site.NumBuildings
-    % Annual Usage Table and Monthly Profile
-    site.Buildings(bd).createAnnualAndMonthlyPropaneUsageTable(...
-        site.PropaneMeters,...
-        site.BuildingPropaneRatios(:,bd),...
-        5);
-
-end %forloop (buildings)
+% Analyze the utility data to break out end uses where possible and develop 
+% usage for each building.
+numYearsToAvg = 5;
+site.Buildings.analyzePropane(site.PropaneMeters, site.BuildingPropaneRatios, ...
+    histDDTable, numYearsToAvg);
 
 end %function
 

@@ -24,7 +24,7 @@ arguments
 
     % propArray: N-element input vector of doubles that will be mapped to
     % properties in the Propnae object.
-    propArray (9,1) double
+    propArray (10,1) double
 
 end %argblock
 
@@ -48,28 +48,32 @@ propaneUtil.IsDHW = logical(propArray(3));
 % Convert to logical (0 = false, any other value is true)
 propaneUtil.IsCooking = logical(propArray(4));
 
-% 5) IsClothesDryer
+% 5) IsInUnitClothesDryer
 % Convert to logical (0 = false, any other value is true)
-propaneUtil.IsClothesDryer = logical(propArray(5));
+propaneUtil.IsInUnitClothesDryer = logical(propArray(5));
 
-% 6) PayerType
+% 6) IsCommonAreaClothesDryer
+% Convert to logical (0 = false, any other value is true)
+propaneUtil.IsCommonAreaClothesDryer = logical(propArray(6));
+
+% 7) PayerType
 % Map numeric value to PayerType enumeration member.
 propaneUtil.UtilityPayerType = ...
-    ece.enum.UtilityPayerType.fromNumber(propArray(6));
+    ece.enum.UtilityPayerType.fromNumber(propArray(7));
 
-% 7) ServiceType
+% 8) ServiceType
 % Map numeric value to ServiceType enumeration member.
 propaneUtil.UtilityServiceType = ...
-    ece.enum.UtilityServiceType.fromNumber(propArray(7));
+    ece.enum.UtilityServiceType.fromNumber(propArray(8));
 
-% 8) RealEstateType
+% 9) RealEstateType
 % Map numeric value to RealEstateType enumeration member.
 propaneUtil.RealEstateType = ....
-    ece.enum.RealEstateType.fromNumber(propArray(8));
+    ece.enum.RealEstateType.fromNumber(propArray(9));
 
-% 9) SeasonalAmpDHWUse
+% 10) SeasonalAmpDHWUse
 % Direcly assign double value.
-propaneUtil.SeasonalAmpDHWUse = propArray(9);
+propaneUtil.SeasonalAmpDHWUse = propArray(10);
 
 end %function
 

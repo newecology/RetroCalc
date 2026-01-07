@@ -21,14 +21,13 @@ arguments
 
     % propArray: N-element input vector of doubles that will be mapped to
     % properties in the Water object.
-    propArray (6,1) double
+    propArray (9,1) double
 
 end %argblock
 
 %% Partition PropArray into Water Properties
 % Assign elements of array into corresponding values, mapping to enums and
 % logicals as needed.
-
 % 1) NumYearsOfData
 % Direcly assign double value.
 waterUtil.NumberOfYears = propArray(1);
@@ -49,10 +48,22 @@ waterUtil.IsCoolingTower = logical(propArray(4));
 % Convert to logical (0 = false, any other value is true)
 waterUtil.IsOther = logical(propArray(5));
 
-% 6) PayerType
+% 6) IrrigationGals
+% Irrigation Gallons
+waterUtil.IrrigationGal = propArray(6);
+
+% 7) CoolingTowerGals
+% Cooling Tower gallons
+waterUtil.CoolingTowerGal = propArray(7);
+
+% 8) Othergals
+% Other misc. gallons
+waterUtil.OtherGal = propArray(8);
+
+% 9) PayerType
 % Map numeric value to PayerType enumeration member.
 waterUtil.UtilityPayerType = ...
-    ece.enum.UtilityPayerType.fromNumber(propArray(6));
+    ece.enum.UtilityPayerType.fromNumber(propArray(9));
 
 end %function
 

@@ -22,6 +22,10 @@ arguments
     % WeatherDataPath: String path to EXCEL file containing weather data.
     fOpts.WeatherDataPath (:,1) string = string.empty(0,1);
 
+    % Site Inputs path: String path to EXCEL file containing basic Site
+    % level Inputs
+    fOpts.SiteInputsDataPath (:,1) string = string.empty(0,1);
+
 end %argblock
 
 %% Initialize Site Object
@@ -50,6 +54,11 @@ end %endif
 % Process optional WeatherData file into Site.
 if ~isempty(fOpts.WeatherDataPath)
     site.Location.importWeatherData(fOpts.WeatherDataPath);
+end %endif
+%% Optional: Set up Site Location WeatherData
+% Process optional WeatherData file into Site.
+if ~isempty(fOpts.SiteInputsDataPath)
+    site.importSiteInputsData(fOpts.SiteInputsDataPath);
 end %endif
 
 end %function

@@ -204,6 +204,18 @@ classdef Building < handle & matlab.mixin.Copyable
 
     end %properties (public get, private set, observable)
 
+    % Properties that need to be created in AnalyzeGas
+    properties (Access = public, SetObservable)
+        % % AnnualGasUsageTable: Table of annual Gas usage for the
+        % % building based on provided Meters.
+        % AnnualGasUsageTable table
+        % 
+        % % MonthlyGasProfile: Tabular profile of monthly gas use over a
+        % % period of 12 months.
+        % MonthlyGasProfile table
+
+    end
+
 
     properties (Access = public)
         % -- Object Properties of Building Class.
@@ -275,7 +287,6 @@ classdef Building < handle & matlab.mixin.Copyable
         % energy for controls on DHW heaters and tanks
         DHWcontrolsTable (:,:) table
         
-
         % DHW fuel usage table. Energy use of DHW systems by energy source:
         % electricity, gas, oil, or propane.
         DHWfuelTable (:,:) table
@@ -728,6 +739,15 @@ classdef Building < handle & matlab.mixin.Copyable
         % createWaterMonthlyProfile: Method to create the average water
         % monthly profile.
         createWaterMonthlyProfile(obj,waterMeters,waterRatios);
+
+        % Analyze gas usage
+        analyzeGas(obj, gasMeters, gasRatios, ddTable, numYearsToAvg);
+
+        % Analyze propane usage
+        analyzePropane(obj, propaneMeters, propaneRatios, ddTable, numYearsToAvg);
+
+        % Analyze oil usage
+        analyzeOil(obj, oilMeters, oilRatios, ddTable, numYearsToAvg);
 
         % -- Level 2 Object Manipulation
         addLevel2Objects(obj,level2Objs);

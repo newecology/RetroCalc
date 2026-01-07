@@ -22,6 +22,47 @@ EffCurveClg=zeros(1,5);
 heatSysData = ece.Reference.HeatSysData;
 coolSysData = ece.Reference.CoolSysData;
 
+%% Unit conversion to COP for heating effs
+HeatEffUnits = obj.HeatEffUnits;
+HeatEff = obj.HeatEff;
+if (HeatEffUnits == ece.enum.HeatingEfficiencyUnits.ASHP_HSPF)
+        HeatEff = HeatEff / 3.413;
+        HeatEffUnits = ece.enum.HeatingEfficiencyUnits.averageCOP;
+end %endif
+%% -- Convert Units for cooling Effs
+CoolEffUnits = obj.CoolEffUnits;
+CoolEff = obj.CoolEff;
+% If input units is a specific type, convert CoolEff.
+isConvertableUnit = ismember(obj.CoolEffUnits,...
+     [ece.enum.CoolingEfficiencyUnits.EER,...
+     ece.enum.CoolingEfficiencyUnits.EER2,...
+     ece.enum.CoolingEfficiencyUnits.SEER,...
+     ece.enum.CoolingEfficiencyUnits.SEER2,...
+     ece.enum.CoolingEfficiencyUnits.IEER]);
+if isConvertableUnit
+     CoolEff = CoolEff / 3.413;
+end %endif
+
+% Convert any EER values in Btu/hour per Watt to COP. All cooling
+% efficiencies will then be in COP, simplifying later calculations.
+% If the user enters IPLV, it should be in COP units.
+isConvertableUnit1 = ismember(obj.CoolEffUnits,...
+    [ece.enum.CoolingEfficiencyUnits.EER,...
+    ece.enum.CoolingEfficiencyUnits.EER2]);
+
+isConvertableUnit2 = ismember(obj.CoolEffUnits,...
+    [ece.enum.CoolingEfficiencyUnits.SEER,...
+    ece.enum.CoolingEfficiencyUnits.SEER2,...
+    ece.enum.CoolingEfficiencyUnits.IEER]);
+
+if isConvertableUnit1
+    CoolEffUnits = ...
+        ece.enum.CoolingEfficiencyUnits.ASHP_COP95F;
+elseif isConvertableUnit2
+    CoolEffUnits = ...
+        ece.enum.CoolingEfficiencyUnits.averageCOP;
+end %endif
+
 
 % Determine default efficiencies for heating systems. This includes
 % "heating only" , and "both heating and cooling" systems.
@@ -39,15 +80,15 @@ if obj.SystemFunction == "HeatingOnly" || ...
     % The efficiency curve is a constant if the user has entered AFUE, HSPF,
     % or average COP. It is a polynomial function of outdoor air temperature
     %  if the user has entered thermal efficiency or ASHP_COP47F.
-    if (obj.HeatEffUnits == "AFUE" || ...
-            obj.HeatEffUnits == "averageCOP")
+    if (HeatEffUnits == "AFUE" || ...
+            HeatEffUnits == "averageCOP")
         %curveAdjust = dfHeatEff - obj.HeatEff;
         EffCurveHtg(:) = ...
-            [0, 0, 0, 0, obj.HeatEff];
+            [0, 0, 0, 0, HeatEff];
 
-    elseif (obj.HeatEffUnits == "ThermalEfficiency" || ...
-            obj.HeatEffUnits == "ASHP_COP47F")
-        curveAdjust = dfHeatEff - obj.HeatEff;
+    elseif (HeatEffUnits == "ThermalEfficiency" || ...
+            HeatEffUnits == "ASHP_COP47F")
+        curveAdjust = dfHeatEff - HeatEff;
         EffCurveHtg(:) = dfCurve;
         EffCurveHtg(5) = dfCurve(5) - curveAdjust;
 
@@ -69,14 +110,14 @@ if obj.SystemFunction == "CoolingOnly" || ...
     % If the user has entered a system efficiency value, the curve (which
     % could be a constant value) is adjusted to match. If default values
     % are being used, then the adjustment is zero.
-    if obj.CoolEffUnits == "IPLV" || ...
-            obj.CoolEffUnits == "averageCOP"
+    if CoolEffUnits == "IPLV" || ...
+            CoolEffUnits == "averageCOP"
         %curveAdjust = dfCoolEff - obj.CoolEff;
         EffCurveClg(:) = ...
-            [0, 0, 0, 0, obj.CoolEff];
+            [0, 0, 0, 0, CoolEff];
 
-    elseif obj.CoolEffUnits == "ASHP_COP95F"
-        curveAdjust = dfCoolEff - obj.CoolEff;
+    elseif CoolEffUnits == "ASHP_COP95F"
+        curveAdjust = dfCoolEff - CoolEff;
         EffCurveClg(:) = dfCurve;
         EffCurveClg(5) = dfCurve(5) - curveAdjust;
 

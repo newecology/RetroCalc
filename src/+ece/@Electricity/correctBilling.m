@@ -25,41 +25,97 @@ end %argblock
 deltaDays = days(elecUtil.AdjustedUsageTable.EndDate - elecUtil.AdjustedUsageTable.StartDate);
 elecUtil.AdjustedUsageTable.Days = deltaDays + 1;
 
-% Months Value
-monthVals = month(elecUtil.AdjustedUsageTable.StartDate + days(15));
-elecUtil.AdjustedUsageTable.Month = monthVals;
+%% Correct Months with Irregular Billing
+% Assign a month number (integer 1 to 12) to each billing period for the calendar
+% month that is most represented in the billing period. Since billing periods are
+% irregular and can be anywhere from 25 to 36 days, or even fall outside
+% that range, and since the billing period can break across calendar months
+% evenly, such as Jun 15 to July 15, the following method is used.
+
+% Consider the first and last months of the utility data set.
+% Where a billing period spans calendar months, find the fraction of the
+% calendar month for the first and second part of the billing period.
+% If the largest month fraction is from the first billing period, count
+% forwards from there, assigning a month number to each billing period. 
+% If the largest month fraction is from the last billing period, count 
+% backwards from there.
+
+firstMonthFrac1 = 0;
+firstMonthFrac2 = 0;
+lastMonthFrac1 = 0;
+lastMonthFrac2 = 0;
+monthDays = [31 28 31 30 31 30 31 31 30 31 30 31];
+numMonths = numel(elecUtil.AdjustedUsageTable.StartDate);
+
+% Month and day for the first and last month start and end dates.
+firstStartDateM = month(elecUtil.AdjustedUsageTable.StartDate(1));
+firstStartDateD = day(elecUtil.AdjustedUsageTable.StartDate(1));
+firstEndDateM = month(elecUtil.AdjustedUsageTable.EndDate(1));
+firstEndDateD = day(elecUtil.AdjustedUsageTable.EndDate(1));
+
+lastStartDateM = month(elecUtil.AdjustedUsageTable.StartDate(end));
+lastStartDateD = day(elecUtil.AdjustedUsageTable.StartDate(end));
+lastEndDateM = month(elecUtil.AdjustedUsageTable.EndDate(end));
+lastEndDateD = day(elecUtil.AdjustedUsageTable.EndDate(end));
+
+% Find calendar month fractions for the first and last months of the data set.
+if firstStartDateM == firstEndDateM
+    firstMonthFrac1 = 1;
+    firstMonthFrac2 = 0;
+else firstMonthFrac1 = 1 - (firstStartDateD) / monthDays(firstStartDateM);
+    firstMonthFrac2 = firstEndDateD / monthDays(firstEndDateM);
+end
+
+if lastStartDateM == lastEndDateM
+    lastMonthFrac1 = 1;
+    lastMonthFrac2 = 0;
+else lastMonthFrac1 = 1 - (lastStartDateD) / monthDays(lastStartDateM);
+    lastMonthFrac2 = lastEndDateD / monthDays(lastEndDateM);
+end
+
+% Find the largest month fraction.
+[maxFrac, index] = max([firstMonthFrac1, firstMonthFrac2, lastMonthFrac1, lastMonthFrac2]);
+
+% If the largest month fraction is from the first billing period, count
+% forwards from there. If the largest month fraction is from the last billing
+% period, count backwards from there.
+if index == 1 | index == 2          % base month numbers on first month
+    if index == 1                  
+        firstMonthNumber =  firstStartDateM;
+    elseif index == 2
+        firstMonthNumber =  firstEndDateM;
+    end
+% Count forwards from first month.
+monthSequence = firstMonthNumber:(numMonths + firstMonthNumber-1);
+end
+
+if index == 3 | index == 4          % base month numbers on last month
+    if index == 3              
+        lastMonthNumber = lastStartDateM;
+    else index == 4
+        lastMonthNumber = lastEndDateM;
+    end
+% Count backwards from last month.
+monthSequence = lastMonthNumber + 1:(numMonths + lastMonthNumber);
+end
+
+% Sequence month numbers as 1 to 12.
+a = monthSequence < 13;
+b = monthSequence > 12 & monthSequence < 25;
+c = monthSequence > 24 & monthSequence < 37;
+d = monthSequence > 36 & monthSequence < 49;
+monthSequence(a) = monthSequence(a); 
+monthSequence(b) = monthSequence(b)-12; 
+monthSequence(c) = monthSequence(c)-24;
+monthSequence(d) = monthSequence(d)-36;
+
+% Write assigned month number to table.
+elecUtil.AdjustedUsageTable.Month = monthSequence';
 
 % Years Value
-yearVals = year(elecUtil.AdjustedUsageTable.StartDate + days(15));
+yearVals = year(elecUtil.AdjustedUsageTable.StartDate + days(16));
 elecUtil.AdjustedUsageTable.Year = yearVals;
 
-
-%% Correct Months with Irregular Billing
-% Do something.
-
-% Iterate through all months after the first to adjust month value.
-for mIdx = 2:elecUtil.NumMonthsOfData
-    % -- Get Logical Flags
-    % Current month matches last previous month in table.
-    isCurrentMonthSameAsLastMonth = ...
-        elecUtil.AdjustedUsageTable.Month(mIdx) == elecUtil.AdjustedUsageTable.Month(mIdx-1);
-    % Current month matches next month, but in a weird way?
-    isCurrentMonthSameAsNextMonth = ...
-        elecUtil.AdjustedUsageTable.Month(mIdx) == elecUtil.AdjustedUsageTable.Month(mIdx-1) + 2;
-
-    % -- Perform Month Value Updates
-    % Check conditions above in order to update current month value.
-    if isCurrentMonthSameAsLastMonth
-        % Current month matches last month, push current month forward one.
-        elecUtil.AdjustedUsageTable.Month(mIdx) = elecUtil.AdjustedUsageTable.Month(mIdx) + 1;
-
-    elseif isCurrentMonthSameAsNextMonth
-        % Current month matches next month, bring current month back one.
-        elecUtil.AdjustedUsageTable.Month(mIdx) = elecUtil.AdjustedUsageTable.Month(mIdx) - 1;
-
-    end %endif
-
-end %forloop (mIdx)
 
 %% Adjust kWh Values
 % The kWh values need to be proportioned based on the new times. Put this

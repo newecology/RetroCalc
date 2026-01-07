@@ -68,7 +68,7 @@ ylabel(ax,"Usage (Unit)");
 % -- Axis Style
 grid(ax,"on");
 axis(ax,"tight");
-
+ylim(ax,[0 inf]);
 % -- TickMark Styling
 % Show a tickmark at every data point (for every month).
 xticks(ax,timeDomain);

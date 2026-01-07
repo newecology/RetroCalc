@@ -30,7 +30,7 @@ end %endif
 
 %% Extract Data Vectors for Actual and Modeled
 % Acquire total actual Oil usage data from HEA (kWh)
-actualUsage = obj.MonthlyOilProfile.Total;
+actualUsage = obj.MonthlyOilProfile.TotalGallons;
 
 % Acquire total modeled Oil usage data from Level 2 (gallons)
 %   This table column has all 12 months + annual roll-up, so we
@@ -67,7 +67,7 @@ ylabel(ax,"Usage (Gallons)");
 % -- Axis Style
 grid(ax,"on");
 axis(ax,"tight");
-
+ylim(ax,[0 inf]);
 % -- TickMark Styling
 % Show a tickmark at every data point (for every month).
 xticks(ax,timeDomain);

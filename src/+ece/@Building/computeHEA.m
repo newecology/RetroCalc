@@ -31,28 +31,35 @@ end %endif
 % Get Building Conditioned area
 bca = bldg.GrossConditionedArea_ft2;
 
+% Get building number of bedrooms
+numBRs = sum(bldg.NumberOfBedroomUnits .* [1, 2, 3, 4]);
+
 %% Compute Main Utilities.
-% Pull in utility usages.
-hea.Electricity_kWh = bldg.AnnualElectricUsageTable.kWh(1);
-hea.Gas_therms = bldg.AnnualGasUsageTable.Therms(1);
+% Pull in total utility usages for the building.
+hea.Electricity_kWh = bldg.AnnualElectricUsageTable.TotalkWh(1);
+hea.Gas_therms = bldg.AnnualGasUsageTable.TotalTherms(1);
 hea.Water_gallons = bldg.AnnualWaterUsageTable.Gallons(1);
-hea.Oil_gallons = bldg.AnnualOilUsageTable.Gallons(1);
-hea.Propane_gallons = bldg.AnnualPropaneUsageTable.Gallons(1);
+hea.Oil_gallons = bldg.AnnualOilUsageTable.TotalGallons(1);
+hea.Propane_gallons = bldg.AnnualPropaneUsageTable.TotalGallons(1);
 
 %% Compute EUI
-% Pull in EUI calculations.
-hea.EUI = bldg.AnnualElectricUsageTable.kWh(3);
+% Pull in EUI calculations for electricity and fossil fuels (gas, oil, 
+% and propane). Energy Use Index in kBtu/ft2.
+hea.EUI = bldg.AnnualElectricUsageTable.TotalkWh(3) + ...
+    bldg.AnnualGasUsageTable.TotalTherms(3) + ...
+    bldg.AnnualOilUsageTable.TotalGallons(3) + ...
+    bldg.AnnualPropaneUsageTable.TotalGallons(3);
 
-
-%% Compute Costs and Total Cost of all Utilities
-% Each cost corresponds to a used utility.
+%% Compute Annual Costs of all Utilities
+% Each cost corresponds to a utility. If a building does not have
+% a particular utility type (eg. oil), that item is zero. 
 hea.AnnualCostOfElectricity = bldg.AnnualElectricUsageTable.Cost(1);
 hea.AnnualCostOfGas = bldg.AnnualGasUsageTable.Cost(1);
 hea.AnnualCostOfWater = bldg.AnnualWaterUsageTable.Cost(1);
 hea.AnnualCostOfOil = bldg.AnnualOilUsageTable.Cost(1);
 hea.AnnualCostOfPropane = bldg.AnnualPropaneUsageTable.Cost(1);
 
-% Total Cost
+% Total combined cost
 hea.AnnualCostTotal = ...
     hea.AnnualCostOfElectricity + ...
     hea.AnnualCostOfWater + ...
@@ -60,23 +67,22 @@ hea.AnnualCostTotal = ...
     hea.AnnualCostOfOil + ...
     hea.AnnualCostOfPropane;
 
-%% Compute CO2 Usage
-% Convert therms/kWh to equivalent CO2 usage using Mass Rates.
-% TODO: These need to be pulled out as inputs that vary with location?
-% Or may be set by the user as an input.
-elecRate = 0.3991; % for MA (kg*CO2/kWh)
-gasRate = 53.06e3; % for MA (kg*CO2/kBtu)
-oilRate = 10.19; % kg*CO2/gallons
-propaneRate = 5.75; % kg*Co2/gallons
+%% Compute CO2e Usage
+% Convert therms/gallons/kWh to equivalent CO2 usage using Mass Rates
+% or regional rates. Values are from the EPA.
+elecRate = bldg.CarbonEqValueElectricity_kgPerkWh; 
+gasRate = bldg.CarbonEqValueGas_kgPerTherm; 
+oilRate = bldg.CarbonEqValueOil_kgPerGallon; 
+propaneRate = bldg.CarbonEqValuePropane_kgPerGallon; 
 
-% Get Converted to CO2 Values
-kWhInCO2amt = hea.Electricity_kWh * elecRate;
-thermsInCO2amt = hea.Gas_therms * gasRate;
-gallonsInCO2amt = (hea.Oil_gallons * oilRate) + ...
-    (hea.Propane_gallons * propaneRate);
+% Find CO2e values in kg.
+CO2eElectricity = hea.Electricity_kWh * elecRate;
+CO2eGas = hea.Gas_therms * gasRate;
+CO2eOil = hea.Oil_gallons * oilRate;
+CO2ePropane = hea.Propane_gallons * propaneRate;
 
-% Compute final CO2 usage per area.
-hea.CO2 = (kWhInCO2amt + thermsInCO2amt + gallonsInCO2amt) / bca;
+% Compute final CO2 usage per area. kg/ft2 per year.
+hea.CO2e = (CO2eElectricity + CO2eGas + CO2eOil + CO2ePropane) / bca;
 
 %% Compute Water Usage
 % Residential and nonresidential usages.
@@ -84,76 +90,98 @@ hea.WaterResidential_gallons = ...
     bldg.AnnualWaterUsageTable.ResidentialGals(1);
 
 hea.WaterNonResidential_gallons = ...
-    bldg.AnnualWaterUsageTable.Gallons(1) - ...
-    hea.WaterResidential_gallons;
+    bldg.AnnualWaterUsageTable.AdjGallons(1) - ...
+    bldg.AnnualWaterUsageTable.ResidentialGals(1);
 
+hea.Water_GPDBedroom = hea.WaterResidential_gallons / 365 / numBRs;
 
 %% Compute SpaceHeat/Cooling
-% Get SpaceHeat in therms and kWh, as well as cooling/heating per sqft.
+% Get space heating usage for electricity and fossil fuels in energy units
+% (kWh, therms, gallons) as well as cooling/heating in kBtu per sqft.
 hea.SpaceHeat_kWh = bldg.AnnualElectricUsageTable.Heat(1);
-% MW_MISU: Add back SpaceCooling in kWh. (Add back in per Henry)
-hea.SpaceHeatFuel_therms = bldg.AnnualGasUsageTable.SpaceHeatTherms(1); 
-hea.SpaceHeatOil_gallons = bldg.AnnualOilUsageTable.SpaceHeatGallons(1); 
+hea.SpaceHeatGas_therms = bldg.AnnualGasUsageTable.SpaceHeatTherms(1); 
+hea.SpaceHeatOil_kBtu = bldg.AnnualOilUsageTable.SpaceHeatkBtu(1); 
 hea.SpaceHeatPropane_gallons = bldg.AnnualPropaneUsageTable.SpaceHeatGallons(1);
 
-% Convert Values to kBtu
-hea.SpaceHeat_kBtuFt2 = ((hea.SpaceHeatFuel_therms * 1e5) + ...
-    (bldg.AnnualOilUsageTable.SpaceHeatTherms(1) * 1e5) + ...
-    (bldg.AnnualPropaneUsageTable.SpaceHeatTherms(1) * 1e5) + ...
+% Convert Values to kBtu per ft2.
+hea.SpaceHeat_kBtuFt2 = ((hea.SpaceHeatGas_therms * 1e5) + ...
+    (bldg.AnnualOilUsageTable.SpaceHeatkBtu(1) * 1e3) + ...
+    (bldg.AnnualPropaneUsageTable.SpaceHeatGallons(1) * 91500) + ...
     (hea.SpaceHeat_kWh * 3413)) / 1e3 / bca;
 
 % Space Cooling
-hea.SpaceCool_kBtuFt2 = (bldg.AnnualElectricUsageTable.Cool(1) * 3413) / ...
+hea.SpaceCool_kWh = bldg.AnnualElectricUsageTable.Cool(1);
+hea.SpaceCool_kBtuFt2 = hea.SpaceCool_kWh * 3413 / ...
     1e3 / bca;
-
-
 
 %% Compute Domestic Hot Water (DHW) Usage
 % Compute in kWh, kBtu, and per area.
-hea.DHW_kWh = 0; % TODO: This may be computed elsewhere. Checked with NE, 
-% will need to make this do something.
+hea.DHW_kWh = bldg.AnnualElectricUsageTable.DHW(1); 
+hea.DHWGas_therms = bldg.AnnualGasUsageTable.DHWTherms(1); 
+hea.DHWOil_kBtu = bldg.AnnualOilUsageTable.DHWkBtu(1);
+hea.DHWPropane_gallons = bldg.AnnualPropaneUsageTable.DHWGallons(1);
 
-% Convert therms to Kbtu
-hea.DHWFuel_kBtu = (bldg.AnnualGasUsageTable.DHWTherms(1)) / 1e3; 
-% Adding for oil and Propane 
-hea.DHWOil_gallons= bldg.AnnualOilUsageTable.DHWGallons(1);
-hea.DHWPropane_gallons= bldg.AnnualPropaneUsageTable.DHWGallons(1);
-
-hea.DHW_kBtuFt2 = (hea.DHWFuel_kBtu + ...
-    ((hea.DHW_kWh * 3413) / 1e3) + (bldg.AnnualOilUsageTable.DHWTherms(1) * 1e5 / 1e3) + ...
-    (bldg.AnnualPropaneUsageTable.DHWTherms(1) * 1e5 / 1e3)) / bca;
+% Convert physical units to kBtu
+hea.DHW_kBtuFt2 = ((hea.DHW_kWh * 3413) + (hea.DHWGas_therms * 1e5) + ...
+    (hea.DHWOil_kBtu * 1e3) + ...
+    (hea.DHWPropane_gallons * 91500)) / 1e3/ bca;
 
 %% Compute Other Values
-% NonHVAC and Appliance usages in kBtuFt2 and kBtu. Added Propane. 
-hea.NonHVAC_kBtuFt2 = ((bldg.AnnualGasUsageTable.StoveDryerTherms(1) * 1e5) + ...
-    (bldg.AnnualElectricUsageTable.Base(1) / 3413) + ...
-    (bldg.AnnualPropaneUsageTable.StoveDryerTherms(1) *1e5)) / 1e3 / bca;
-hea.ApplianceFuel_kBtu = (bldg.AnnualGasUsageTable.StoveDryerTherms(1) + ...
-    bldg.AnnualPropaneUsageTable.StoveDryerTherms(1)) * ...
-    1e5 / 1e3;
+% NonHVAC electricity usage in kBtu per ft2.
+% Electricity that is not used for heating or cooling. It is used
+% for lights, plug loads, appliances, fans, and pumps.
+hea.NonHVACelec_kBtuFt2 = bldg.AnnualElectricUsageTable.Base(1) * 3413 ...
+    / 1e3 / bca;
+% Appliance fuel usage in kBtu per ft2.
+% Includes natural gas and propane used for cooking and clothes drying.
+% Does not include heating of domestic hot water.
+hea.ApplianceFuel_kBtuFt2 = ((bldg.AnnualGasUsageTable.StoveDryerTherms(1) * 1e5) + ...
+    (bldg.AnnualPropaneUsageTable.StoveDryerGallons(1) * 91500)) ...
+    / 1e3 / bca;
 
 %% Compute Unit Costs
 % Unit costs are computed as the ratio of annual utility unit used over the
-% annual cost for that utility.
+% annual cost for that utility for the most recent year.
+% Electric Unit Cost. $/kWh
+hea.UnitCostOfElectricity = bldg.AnnualElectricUsageTable.Cost(end) / ...
+    bldg.AnnualElectricUsageTable.TotalkWh(end);
+    
+% Gas Unit Cost. $/therm
+hea.UnitCostOfGas = bldg.AnnualGasUsageTable.Cost(end) / ...
+    bldg.AnnualGasUsageTable.TotalTherms(end);
+
+% Water Unit Cost. $/gallon
+hea.UnitCostOfWater = bldg.AnnualWaterUsageTable.Cost(end) / ...
+    bldg.AnnualWaterUsageTable.Gallons(end);
+
+% Oil Unit Cost $/gallon
+hea.UnitCostOfOil = bldg.AnnualOilUsageTable.Cost(end) / ...
+    bldg.AnnualOilUsageTable.TotalGallons(end);
+
+% Propane Unit Cost $/gallon
+hea.UnitCostOfPropane = bldg.AnnualPropaneUsageTable.Cost(end) / ...
+    bldg.AnnualPropaneUsageTable.TotalGallons(end);
+
+% Alternate method based on the row 1 average usage and cost.
 % Electric Unit Cost
-hea.UnitCostOfElectricity = ...
-    hea.AnnualCostOfElectricity / hea.Electricity_kWh;
+% hea.UnitCostOfElectricity = ...
+%     hea.AnnualCostOfElectricity / hea.Electricity_kWh;
 
 % Gas Unit Cost
-hea.UnitCostOfGas = ...
-    hea.AnnualCostOfGas / hea.Gas_therms;
+% hea.UnitCostOfGas = ...
+%     hea.AnnualCostOfGas / hea.Gas_therms;
 
 % Water Unit Cost
-hea.UnitCostOfWater = ...
-    hea.AnnualCostOfWater / hea.Water_gallons;
+% hea.UnitCostOfWater = ...
+%     hea.AnnualCostOfWater / hea.Water_gallons;
 
 % Oil Unit Cost
-hea.UnitCostOfOil = ...
-    hea.AnnualCostOfOil / hea.Oil_gallons;
+% hea.UnitCostOfOil = ...
+%     hea.AnnualCostOfOil / hea.Oil_gallons;
 
 % Propane Unit Cost
-hea.UnitCostOfPropane = ...
-    hea.AnnualCostOfPropane / hea.Propane_gallons;
+% hea.UnitCostOfPropane = ...
+%     hea.AnnualCostOfPropane / hea.Propane_gallons;
 
 %% Assign to Building
 % Assign HEA object to Building property.

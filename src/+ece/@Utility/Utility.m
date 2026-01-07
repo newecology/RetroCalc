@@ -58,7 +58,7 @@ classdef  Utility < handle & matlab.mixin.Heterogeneous
     properties (GetAccess = public, SetAccess = protected, AbortSet, SetObservable)
         % AdjustedUsageTable: Table of monthly utility usages and
         % corresponding costs over time period.
-        AdjustedUsageTable table
+        %AdjustedUsageTable table
         
         % DataSource: String name of data source that utility data comes
         % from.
@@ -66,8 +66,14 @@ classdef  Utility < handle & matlab.mixin.Heterogeneous
 
     end %properties (Private)
 
+    properties (Access = public, AbortSet, SetObservable)
+        % Adjusted usage table, created for each utility, analyzed from
+        % buildings.
+        AdjustedUsageTable table
 
-    properties (GetAccess = public, SetAccess = protected)
+    end
+
+    properties (Access = public)  %(GetAccess = public, SetAccess = protected)
         % -- Public Get, Private Set Properties
         % AnnualUsageTable: The final annual usage table of an utility.
         AnnualUsageTable table
@@ -78,6 +84,7 @@ classdef  Utility < handle & matlab.mixin.Heterogeneous
         % Cost: The rolled-up cost of an utility.
         Cost (1,1) double
 
+        
     end %properties (Public Set, Private Get)
     
 

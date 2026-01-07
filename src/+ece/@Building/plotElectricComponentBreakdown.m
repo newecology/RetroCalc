@@ -31,10 +31,10 @@ end %endif
 
 %% Extract Data Vectors for Building HEA Electric Usage
 % Pull from the corresponding Utility Monthly Profile
-baseUsage = sum(obj.MonthlyElectricProfile.Base);
-heatUsage = sum(obj.MonthlyElectricProfile.Heat);
-coolUsage = sum(obj.MonthlyElectricProfile.Cool);
-totalUsage = sum(obj.MonthlyElectricProfile.Total);
+baseUsage = sum(obj.MonthlyElectricProfile.Base_kWh);
+heatUsage = sum(obj.MonthlyElectricProfile.Heat_kWh);
+coolUsage = sum(obj.MonthlyElectricProfile.Cool_kWh);
+totalUsage = sum(obj.MonthlyElectricProfile.Total_kWh);
 
 % Compute Percentages
 basePercent = (baseUsage / totalUsage) * 100;

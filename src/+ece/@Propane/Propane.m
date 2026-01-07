@@ -18,9 +18,14 @@ classdef Propane < ece.Utility
         % IsCooking: Flag if Propane is used for cooking in units.
         IsCooking (1,1) logical
 
-        % IsClothesDryer: Flag to indicate if Propane used for clothes drying.
-        IsClothesDryer (1,1) logical
+        % IsInUnitClothesDryer: Flag to indicate if gas used for in-unit 
+        % clothes drying.
+        IsInUnitClothesDryer (1,1) logical
 
+        % IsCommonAreaClothesDryer: Flag to indicate if gas used for common
+        % area clothes drying.
+        IsCommonAreaClothesDryer (1,1) logical      
+        
         % SeasonalAmpDHWUse: Seasonal amplitude of water use for DHW meters.
         SeasonalAmpDHWUse (1,1) double       
         

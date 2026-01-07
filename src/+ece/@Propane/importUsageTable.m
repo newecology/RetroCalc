@@ -1,4 +1,4 @@
-function importUsageTable(propaneUtil,useTbl)
+function importUsageTable(propaneUtil, useTbl)
 %IMPORTUSAGETABLE Method to populate the AdjustedUsageTable property of an
 %Electricity object from a provided table of usage data.
 %   This method will receive a raw useTbl table that has been loaded from
@@ -29,11 +29,11 @@ useTbl = renamevars(useTbl,3,"Usage");
 
 %% Set Initial Input Directly to Raw Usage Table and Usage Table
 % Assign input directly to Raw and AdjustedUsageTable property.
-propaneUtil.RawUsageTable = useTbl;
+propaneUtil.RawUsageTable = rmmissing(useTbl, 'DataVariables', useTbl.Properties.VariableNames);
 
 % The AdjustedUsageTable will be further cleaned and sanitized as it is processed
 % going forward.
-propaneUtil.AdjustedUsageTable = useTbl;
+propaneUtil.AdjustedUsageTable = rmmissing(useTbl, 'DataVariables', useTbl.Properties.VariableNames);
 
 %% Correct Billing Periods in Table
 % If there are uneven billing periods that would skew the analysis, we need

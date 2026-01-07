@@ -63,7 +63,7 @@ HeatCoolTbl = fillmissing(HeatCoolTbl,...
     "constant", 0,...
     "DataVariables",replaceVars);
 
-% Get number of Plumbing Fixture from table height, and then preallocate output.
+% Get number of heating/cooling devices from table height, and then preallocate output.
 numHeatCool= height(HeatCoolTbl);
 heatCoolArray = ece.HeatCool.empty(numHeatCool,0);
 
@@ -112,10 +112,13 @@ for heatCoolIdx = 1:numHeatCool
     hc.DistEffHtg = HeatCoolTbl.DistEffHtg(heatCoolIdx);
     hc.HeatEffUnits = HeatCoolTbl.HeatEffUnits(heatCoolIdx);
     hc.HeatEff = HeatCoolTbl.HeatEff(heatCoolIdx);
+    %hc.HeatEffUnits = HeatCoolTbl.HeatEffUnits(heatCoolIdx);
+
     % Cooling
     hc.DistEffClg = HeatCoolTbl.DistEffClg(heatCoolIdx);
     hc.CoolEffUnits = HeatCoolTbl.CoolEffUnits(heatCoolIdx);
     hc.CoolEff = HeatCoolTbl.CoolEff(heatCoolIdx);
+    %hc.CoolEffUnits = HeatCoolTbl.CoolEffUnits(heatCoolIdx);
 
     % Store Constructed heat cool Object
     % Place into position in initialized array.

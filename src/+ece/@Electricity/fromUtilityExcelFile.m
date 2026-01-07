@@ -76,10 +76,10 @@ for sheetIdx = 1:numElecSheets
         "FileType","spreadsheet",...
         "Sheet",elecSheetNames(sheetIdx),...
         "Range","A13:D49");
-
+    
     % Import usage table as table into electricity object.
     rawUsageTable = readtable(excelFilePath,opts);
-    elecUtil.importUsageTable(rawUsageTable);
+    elecUtil.importUsageTable(rawUsageTable)
 
     %% Read Fractional Limits
     % Read the portion of the Electricity Utility sheet that provides the

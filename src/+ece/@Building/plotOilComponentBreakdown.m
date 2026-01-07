@@ -33,7 +33,7 @@ end %endif
 % Pull from the corresponding Utility Monthly Profile
 dhwUsage = sum(obj.MonthlyOilProfile.DHWGallons);
 spaceHeatUsage = sum(obj.MonthlyOilProfile.SpaceHeatGallons);
-totalUsage = sum(obj.MonthlyOilProfile.Total);
+totalUsage = sum(obj.MonthlyOilProfile.TotalGallons);
 
 % Compute Percentages
 dhwPercent = (dhwUsage / totalUsage) * 100;

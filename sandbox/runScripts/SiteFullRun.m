@@ -1,5 +1,5 @@
 %% Site Full Run Example (Setup, HEA, and L2)
-% Michael Sullivan
+%
 % 5/6/2025
 
 %% Prepare Input Data and Files for HEA
@@ -12,6 +12,8 @@ hddDataPath = fullfile(ecetest.testDataRoot,...
     "historicalDDInputs.xlsx");
 weatherDataPath = fullfile(ecetest.testDataRoot,...
     "weatherDataInputs.xlsx");
+siteInputsDataPath = fullfile(ecetest.testDataRoot,...
+    "siteInputs.xlsx");
 
 %% Initialize Site Object
 % Set up Site from optional inputs.
@@ -19,9 +21,9 @@ site = ece.Site.fromInputExcelFiles(...
     "BuildingPath",buildingDataPath,...
     "UtilityPath",utilityDataPath,...
     "HistDDPath",hddDataPath,...
-    "WeatherDataPath",weatherDataPath);
+    "WeatherDataPath",weatherDataPath,"SiteInputsDataPath",siteInputsDataPath);
 
-%% Run Processing Routines4
+%% Run Processing Routines
 % Process each utility and then generate Buildings' corresponding Annual
 % and Monthly Usage Tables.
 site.computeBuildingUtilityUsages();
@@ -48,7 +50,7 @@ site.Buildings(1).importLevel2ObjectData(buildingLevel2DataPath);
 site.Buildings(1).computeLevel2();
 
 % Display result to command line.
-disp(site.Buildings(1).RunStatsTable);
+disp(site.Buildings(1).Level2);
 
 
 

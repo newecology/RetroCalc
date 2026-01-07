@@ -36,7 +36,7 @@ classdef Reference
 
         WeatherCityData = ece.Reference.getWeatherCityData;
 
-        OilTypeThermsTable = ece.Reference.getOilTypeThermsTable;
+        OilTypekBtuTable = ece.Reference.getOilTypekBtuTable;
 
     end %properties (Constant)
 
@@ -244,15 +244,16 @@ classdef Reference
             val.State = string(val.State);
         end %function
 
-        function val = getOilTypeThermsTable()
+        function val = getOilTypekBtuTable()
 
             filePath = fullfile("+ece","@Reference",...
-                "OilTypeThermsTable.xlsx");
+                "OilTypekBtuTable.xlsx");
             val = readtable(filePath,...
                 "VariableNamingRule","preserve");
             
-            
             val.OilType = string(val.OilType);
+            %val.Properties.VariableNames{'BtuPerGallon'}='kBtuPerGallon';
+
         end %function
 
     end  % methods (static, public)

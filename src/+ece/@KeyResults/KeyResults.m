@@ -54,11 +54,11 @@ classdef KeyResults
         % Unit Cost of Propane: Dollar per gallon cost of Propane.
         UnitCostOfPropane (1,1) double
 
-        % AnnualCostTotal: Total cost of all Utilities.
+        % AnnualCostTotal: Total cost of all Utilities combined.
         AnnualCostTotal (1,1) double        
 
-        % CO2: Total use of CO2.
-        CO2 (1,1) double
+        % CO2e: Total use of CO2 equivalent in kg.
+        CO2e (1,1) double
 
         % WaterResidential_gallons: Annual residential water use in 
         % gallons.
@@ -68,14 +68,20 @@ classdef KeyResults
         % gallons.
         WaterNonResidential_gallons (1,1) double
 
+        % Water residential gallons per day per bedroom.
+        Water_GPDBedroom (1,1) double
+
         % SpaceHeat_kWh: Annual space heat kWh usage.
         SpaceHeat_kWh (1,1) double
 
         % SpaceHeatFuel_therms: Annual space heat fuel usage in therms.
-        SpaceHeatFuel_therms (1,1) double
+        SpaceHeatGas_therms (1,1) double
 
-        % SpaceHeatOil_gallons: Annual space heat oil usage in gallons
-        SpaceHeatOil_gallons (1,1) double
+        % SpaceHeatOil_kBtu: Annual space heat oil usage in kBtu
+        % This usage is in kBtu instead of gallons because there are
+        % different types of oil with different Btu content, so the space
+        % heating and DHW oil energy is in kBtu.
+        SpaceHeatOil_kBtu (1,1) double
 
         % SpaceHeatPropane_gallons: Annual space heat oil usage in gallons
         SpaceHeatPropane_gallons (1,1) double
@@ -83,30 +89,41 @@ classdef KeyResults
         % SpaceHeat_kBtuFt2: Annual space heat in kBtu per sq. ft.
         SpaceHeat_kBtuFt2 (1,1) double
 
-        % SpaceCool_kBtuFt2: Annual space cooling in kBtu per sq.ft.
+        % Space cooling kWh. Annual space cooling in kWh.
+        SpaceCool_kWh (1,1) double
+
+        % SpaceCool_kBtuFt2: Annual space cooling in kBtu per sq.ft 
+        % (electricity only).
+        % Space cooling by energy sources other than electricity (such as
+        % gas or district steam) is not provided for at this time.
         SpaceCool_kBtuFt2 (1,1) double
 
         % DHW_kHw: Domestic hot water usage in kWh. (TODO: This seems to
         % need to be set later by something else outside HEA).
         DHW_kWh (1,1) double
 
-        % DHWFuel_kBtu: Domestic hot water usage in kBtu for fuel.
-        DHWFuel_kBtu (1,1) double
+        % DHWGas_therms: Domestic hot water usage in therms for gas.
+        DHWGas_therms (1,1) double
 
-        % DHWOil_kBtu: Domestic hot water usage in Gallons for Oil.
-        DHWOil_gallons (1,1) double
+        % DHWOil_kBtu: Domestic hot water usage in kBtu for Oil.
+        DHWOil_kBtu (1,1) double
 
         % DHWPropane_kBtu: Domestic hot water usage in Gallons for Propane.
         DHWPropane_gallons (1,1) double
 
-        % DHW_kBtuFt2: Domestic hot water usage in kBtu per sqft.
+        % DHW_kBtuFt2: Domestic hot water usage in kBtu per sqft for
+        % electricity, gas, and propane.
         DHW_kBtuFt2 (1,1) double
 
-        % NonHVAC_kBtuFt2: NonHVAC usage in kbtu per sqft.
-        NonHVAC_kBtuFt2 (1,1) double
+        % NonHVACelec_kBtuFt2: NonHVAC electricity usage in kbtu per sqft.
+        % Electricity that is not used for heating or cooling. It is used
+        % for lights, plug loads, appliances, fans, and pumps.
+        NonHVACelec_kBtuFt2 (1,1) double
 
-        % ApplianceFuel_kBtu: Fuel usage for all appliance in kBtu.
-        ApplianceFuel_kBtu (1,1) double
+        % ApplianceFuel_kBtu: Fuel usage for appliances in kBtu/ft2.
+        % Includes natural gas and propane used for cooking and clothes drying.
+        % Does not include heating of domestic hot water.
+        ApplianceFuel_kBtuFt2 (1,1) double
 
     end %properties
 
@@ -129,36 +146,42 @@ classdef KeyResults
 
         end %function
 
-        
-
         function value = get.ResultsTable(obj)
             % Getter for ResultsTable.
             %   Outputs the properties of the KeyResults object as a 
             %   single-row table for easy visualizations.
 
             % Create array of properties.
-            propArray = [obj.Electricity_kWh,obj.Gas_therms,...
-                obj.Water_gallons,obj.EUI,obj.AnnualCostOfElectricity,...
-                obj.AnnualCostOfGas,obj.AnnualCostOfWater,obj.AnnualCostTotal,...
-                obj.CO2,obj.WaterResidential_gallons,...
-                obj.WaterNonResidential_gallons,obj.SpaceHeat_kWh,...
-                obj.SpaceHeatFuel_therms,obj.SpaceHeatOil_gallons,...
-                obj.SpaceHeatPropane_gallons,obj.SpaceHeat_kBtuFt2,...
-                obj.SpaceCool_kBtuFt2,obj.DHW_kWh,obj.DHWFuel_kBtu,...
-                obj.DHWOil_gallons,obj.DHWOil_gallons,obj.DHW_kBtuFt2,...
-                obj.NonHVAC_kBtuFt2,obj.ApplianceFuel_kBtu];
+            propArray = [obj.Electricity_kWh, obj.Gas_therms,...
+                obj.Water_gallons, obj.Oil_gallons, obj.Propane_gallons, ...
+                obj.EUI, obj.AnnualCostOfElectricity, obj.UnitCostOfElectricity, ...
+                obj.AnnualCostOfGas, obj.UnitCostOfGas, obj.AnnualCostOfWater, ...
+                obj.UnitCostOfWater, obj.AnnualCostOfOil, obj.UnitCostOfOil, ...
+                obj.AnnualCostOfPropane, obj.UnitCostOfPropane, obj.AnnualCostTotal,...
+                obj.CO2e, obj.WaterResidential_gallons,...
+                obj.WaterNonResidential_gallons, obj.Water_GPDBedroom, ...
+                obj.SpaceHeat_kWh, obj.SpaceHeatGas_therms, obj.SpaceHeatOil_kBtu,...
+                obj.SpaceHeatPropane_gallons, obj.SpaceHeat_kBtuFt2,...
+                obj.SpaceCool_kWh, obj.SpaceCool_kBtuFt2, ...
+                obj.DHW_kWh, obj.DHWGas_therms, obj.DHWOil_kBtu, ...
+                obj.DHWPropane_gallons, obj.DHW_kBtuFt2,...
+                obj.NonHVACelec_kBtuFt2, obj.ApplianceFuel_kBtuFt2];
 
             % Create array of table column names.
             tableColNames = ["Electricity (kWh)","Gas (therms)",...
-                "Water (gallons)","EUI","Cost Electricity","Cost Gas",...
-                "Cost Water","Cost Total","CO2","Water - Residential (gallons)",...
-                "Water - NonResidential (gallons)","Space Heat (kWh)",...
-                "Space Heat Fuel (therms)","Space Heat Oil (gallons)",...
-                "Space Heat Propane (gallons)","Space Heat (kBtuFt2)",...
-                "Space Cool (kBtuFt2)","DHW (kWh)","DHW Fuel (kBtu)",...
-                "DHW Oil (gallons)","DHW Propane (gallons)",...
-                "DHW Fuel (kBtuFt2)","Non-HVAC (kBtuFt2)",...
-                "Appliance Fuel (kBtu)"];
+                "Water (gallons)", "Oil (gallons)", "Propane (gallons)", ...
+                "EUI", "Cost Electricity", "Unit Cost of Electricity", ...
+                "Cost Gas", "Unit Cost of Gas", "Cost Water", "Unit Cost of Water", ...
+                "Cost Oil", "Unit Cost of Oil", "Cost Propane", ...
+                "Unit Cost of Propane", "Cost Total", "CO2 equivalent", ...
+                "Water - Residential (gallons)", "Water - NonResidential (gallons)", ...
+                "Water - gallons per day per bedroom", "Space Heat (kWh)",...
+                "Space Heat Gas (therms)", "Space Heat Oil (kBtu)", ...
+                "Space Heat Propane (gallons)", "Space Heat Energy (kBtuFt2)", ...
+                "Space Cooling (kWh)", "Space Cooling (kBtuFt2)", ...
+                "DHW (kWh)", "DHW Gas (therms)", "DHW Oil (kBtu)", ...
+                "DHW Propane (gallons)", "DHW Energy(kBtuFt2)", ...
+                "Non-HVAC Electricity (kBtuFt2)", "Appliance Fuel (kBtuFt2)"];
 
             % Put Table together for outputs.
             value = table(tableColNames',propArray',...

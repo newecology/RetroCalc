@@ -1,4 +1,4 @@
-function addUtilities(site,utilities)
+function addUtilities(site, utilities)
 %ADDUTILITIESS Method to add Utilities to the Utilities array in Site.
 %   This method is a helper method to add Utilities to object collection
 %   array in Site. It will place the Utility into the correct array based

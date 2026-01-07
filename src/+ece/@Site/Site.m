@@ -15,19 +15,19 @@ classdef Site < handle
 
         % CarbonEqValueElectricity_kgPerkWh: Carbon equivalent of
         % Electricity, in units of kg per kilowatt-hour.
-        CarbonEqValueElectricity_kgPerkWh (1,1) double = 0;
+        CarbonEqValueElectricity_kgPerkWh (1,1) double = .3692; % for MA kgCO2e/kWh
 
         % CarbonEqValueGas_kgPerTherm: Carbon equivalent of Gas, in units
         % of kg per therm.
-        CarbonEqValueGas_kgPerTherm (1,1) double = 5.3;
+        CarbonEqValueGas_kgPerTherm (1,1) double = 5.31;
 
-        % CarbonEqValueOil_kgPerTherm: Carbon equivalent of Oil, in units
-        % of kg per therm.
-        CarbonEqValueOil_kgPerGallon (1,1) double = 10.19;
+        % CarbonEqValueOil_kgPerGallon: Carbon equivalent of Oil, in units
+        % of kg per gallon.
+        CarbonEqValueOil_kgPerGallon (1,1) double = 10.24;
 
-        % CarbonEqValuePropane_kgPerTherm: Carbon equivalent of Propane, in units
-        % of kg per therm.
-        CarbonEqValuePropane_kgPerGallon(1,1) double = 5.75;
+        % CarbonEqValuePropane_kgPerGallon: Carbon equivalent of Propane, in units
+        % of kg per gallon.
+        CarbonEqValuePropane_kgPerGallon(1,1) double = 5.72;
 
         % HeatingShoulderMonths: Months where Heating use overlaps.
         HeatingShoulderMonths (:,1) double = double.empty(0,1);
@@ -731,11 +731,15 @@ classdef Site < handle
         % Days table into site properties.
         importHistoricalDegreeDays(obj, dataSource);
 
+        %importSiteInputsData: Method to import basic site data
+        importSiteInputsData(obj,dataSource);
+
         % computeBuildingUtilityUsages: Method to process and compute each
         % utility in Site and within corresponding Building by proportion.
         computeBuildingUtilityUsages(obj);
 
-        % addBuildings: Method to add Building(s) to Site collection of
+        % addBuildings: Method to add
+        % Building(s) to Site collection of
         % buildings.
         addBuildings(obj,bldgs);
 

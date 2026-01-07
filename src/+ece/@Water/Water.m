@@ -27,11 +27,11 @@ classdef Water < ece.Utility
 
         % IrrigationGal: Integer value indicating number of gallons used 
         % for irrigation.
-        IrrigationGal (1,1) double {mustBeInteger}
+        IrrigationGal (1,1) double 
 
         % CoolingTowerGal: Integer value indicating number of gallons used 
         % for cooling tower.
-        CoolingTowerGal (1,1) double {mustBeInteger}
+        CoolingTowerGal (1,1) double 
 
         % OtherGal: Amount of other gallons used.
         OtherGal (1,1) double
@@ -94,7 +94,7 @@ classdef Water < ece.Utility
     end %methods (public, Internal)
 
 
-    methods(Access=public)
+    methods(Access = public)
 
         % createUsagePlot: Function to plot the water bill data by year.
         createUsagePlot(obj);
