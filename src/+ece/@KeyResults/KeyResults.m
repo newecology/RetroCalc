@@ -120,10 +120,20 @@ classdef KeyResults
         % for lights, plug loads, appliances, fans, and pumps.
         NonHVACelec_kBtuFt2 (1,1) double
 
+        % ApplianceFuel_Therms: Fuel usage for appliances in Therms.
+        % Includes natural gas and propane used for cooking and clothes drying.
+        % Does not include heating of domestic hot water   
+        ApplianceFuel_Therms (1,1) double
+        
+
         % ApplianceFuel_kBtu: Fuel usage for appliances in kBtu/ft2.
         % Includes natural gas and propane used for cooking and clothes drying.
         % Does not include heating of domestic hot water.
         ApplianceFuel_kBtuFt2 (1,1) double
+
+        % NonHVACelec_kWh: NonHVAC electricity usage in kWh
+        NonHVACelec_kWh (1,1) double
+
 
     end %properties
 
@@ -165,7 +175,8 @@ classdef KeyResults
                 obj.SpaceCool_kWh, obj.SpaceCool_kBtuFt2, ...
                 obj.DHW_kWh, obj.DHWGas_therms, obj.DHWOil_kBtu, ...
                 obj.DHWPropane_gallons, obj.DHW_kBtuFt2,...
-                obj.NonHVACelec_kBtuFt2, obj.ApplianceFuel_kBtuFt2];
+                obj.NonHVACelec_kBtuFt2,obj.NonHVACelec_kWh, ...
+                obj.ApplianceFuel_Therms, obj.ApplianceFuel_kBtuFt2];
 
             % Create array of table column names.
             tableColNames = ["Electricity (kWh)","Gas (therms)",...
@@ -181,7 +192,7 @@ classdef KeyResults
                 "Space Cooling (kWh)", "Space Cooling (kBtuFt2)", ...
                 "DHW (kWh)", "DHW Gas (therms)", "DHW Oil (kBtu)", ...
                 "DHW Propane (gallons)", "DHW Energy(kBtuFt2)", ...
-                "Non-HVAC Electricity (kBtuFt2)", "Appliance Fuel (kBtuFt2)"];
+                "Non-HVAC Electricity (kBtuFt2)","Non-HVAC Electricity (kWh)","Appliance Fuel(Therms)","Appliance Fuel (kBtuFt2)"];
 
             % Put Table together for outputs.
             value = table(tableColNames',propArray',...

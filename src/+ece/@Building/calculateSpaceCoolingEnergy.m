@@ -305,6 +305,7 @@ coolControls_kWh = coolControls_kWh(:,...
     [obj.HeatCool.SystemFunction] == "BothHeatingAndCooling" | ...
     [obj.HeatCool.SystemFunction] == "CoolingOnly");
 
+coolControls_kWh(:, all(coolControls_kWh == 0, 1)) = [];
 % Organize the Data
 % Add column at end for utility roll-up
 coolControls_kWh = [coolControls_kWh, sum(coolControls_kWh,2)];
@@ -317,6 +318,7 @@ spaceCoolingTable_kWh = spaceCoolingTable_kBtu;
 spaceCoolingTable_kWh{:, 4:16} = ...
     spaceCoolingTable_kWh{:, 4:16} * 1000/3413;
 
+spaceCoolingTable_kWh;
 % Add cool Controls kWh (transpose to fit)
 spaceCoolingTable_kWh{:, 4:16} = spaceCoolingTable_kWh{:, 4:16} + ...
     coolControls_kWh';

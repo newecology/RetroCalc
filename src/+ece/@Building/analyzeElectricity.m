@@ -38,7 +38,27 @@ numBuildings = length(bldgs);
 % Based on if the meter ratio for that building is > 0
 bldgMeters = zeros(numMeters, numBuildings);
 bldgMeters = elecRatios > 0;
- 
+
+% Initialize AnnualElectricUsageTable
+for bIdx = 1:numBuildings
+  bldgs(bIdx).AnnualElectricUsageTable = table(...
+    repmat({''}, 6, 1), ...  % Property (string/cell array)
+    zeros(6, 1), ...          % MeterCount
+    zeros(6, 1), ...          % HDD65
+    zeros(6, 1), ...          % CDD70
+    zeros(6, 1), ...          % TotalkWh
+    zeros(6, 1), ...          % Base
+    zeros(6, 1), ...          % DHW
+    zeros(6, 1), ...          % Heat
+    zeros(6, 1), ...          % Cool
+    zeros(6, 1), ...          % BasePlusDHW
+    zeros(6, 1), ...          % Cost
+    zeros(6, 1), ...          % HeatSlope
+    zeros(6, 1), ...          % CoolSlope
+    'VariableNames', {'Property', 'MeterCount', 'HDD65', 'CDD70', 'TotalkWh', ...
+                      'Base', 'DHW', 'Heat', 'Cool', 'BasePlusDHW', 'Cost', ...
+                      'HeatSlope', 'CoolSlope'});
+end 
 %% Analyze usage for each meter
 
 for meterIdx = 1:numMeters
@@ -262,6 +282,7 @@ for meterIdx = 1:numMeters
 
         % Apply to the average baseload from the regression.
         em.AdjustedUsageTable.Base = baseLoad * baseUsageVector;
+        em.AdjustedUsageTable.Base = min(em.AdjustedUsageTable.Base, em.AdjustedUsageTable.AdjkWh);
         
         % Subtract baseload from total.
         HVACusage = em.AdjustedUsageTable.AdjkWh - em.AdjustedUsageTable.Base;
@@ -278,7 +299,7 @@ for meterIdx = 1:numMeters
 
     end % if statement for usage flags are base, heat, cool
 
-    %% Meter serves baseload, space cooling, and space heating (not DHW)
+    %% Meter serves baseload, space cooling, and space heating and DHW
     % We are not presently able to analyze this case.
     if em.IsBaseLoad & em.IsSpaceHeat & em.IsCooling & em.IsDHW
      
@@ -403,21 +424,35 @@ for meterIdx = 1:numMeters
 % (base, DHW, heating, cooling) based on the usage that would occur
 % in a year of average weather. Average weather is defined as the average
 % number of heating degree days to base 65F over the past X years -
-% usually the past 5 years. And the average number of cooling degree days
+% usually the past 5 or 10 years. And the average number of cooling degree days
 % to base 70F over the past X years.
 
 % Use the historical daily degree day table to find average HDD/year
 % and average CDD/year.
 
 % Convert years to average to number of days (no leap years)
-numDaysToAvg = numYearsToAvg * 365;
-lastXYearsIndices = (height(ddTable) + 1 - numDaysToAvg) : height(ddTable);
+% numDaysToAvg = numYearsToAvg * 365;
+% lastXYearsIndices = (height(ddTable) + 1 - numDaysToAvg) : height(ddTable);
+% 
+% % Pull out Last X years of HDD/CDD per year.
+% % The below line pulls the last 5 years of the corresponding
+% % column by index, resulting in the last 5 years of results
+% avgHDD = sum(ddTable.HDD65(lastXYearsIndices)) / numYearsToAvg;
+% avgCDD = sum(ddTable.CDD70(lastXYearsIndices)) / numYearsToAvg;
 
-% Pull out Last X years of HDD/CDD per year.
-% The below line pulls the last 5 years of the corresponding
-% column by index, resulting in the last 5 years of results
-avgHDD = sum(ddTable.HDD65(lastXYearsIndices)) / numYearsToAvg;
-avgCDD = sum(ddTable.CDD70(lastXYearsIndices)) / numYearsToAvg;
+
+%Average CDD HDD
+% Get the most recent N years
+allYears = unique(year(ddTable.Date));
+recentYears = allYears(end-numYearsToAvg+1:end);
+
+% Filter and calculate
+idx = ismember(year(ddTable.Date), recentYears);
+
+avgHDD = sum(ddTable.HDD65(idx)) / numYearsToAvg;
+avgCDD = sum(ddTable.CDD70(idx)) / numYearsToAvg;
+
+% 
 
 % Monthly profile starts in January.
 % The monthly profile is a 12 row (per month) and 7-column table.
@@ -460,6 +495,15 @@ for meterIdx = 1:numMeters
     % and the heat/cool slopes for this meter. kWh
     normAnnualHeating = avgHDD * em.AnnualUsageTable.HeatSlope(1);
     normAnnualCooling = avgCDD * em.AnnualUsageTable.CoolSlope(1);
+
+
+    %Updating Annual Usage Table CDD, HDD, Heat and Cool average year values, with
+    %normalised 5-year hist weather data values
+    em.AnnualUsageTable.HDD65(1) = avgHDD;
+    em.AnnualUsageTable.CDD70(1) = avgCDD;
+    em.AnnualUsageTable.Heat(1) = normAnnualHeating;
+    em.AnnualUsageTable.Cool(1) = normAnnualCooling;
+
 
     % Normalize Monthly Table Results
     % Note, if there are any NaN's in the monthly table for space heat, the
@@ -683,7 +727,16 @@ for bldgIdx = 1:numBuildings
     bldgMonthlyProfile = array2table(sumMonthlyProfiles, "VariableNames", ...
         ["Month", "Base_kWh", "DHW_kWh", "Heat_kWh", "Cool_kWh", ...
         "BasePlusDHW_kWh", "Total_kWh"]);
+    bldgMonthlyProfile.Total_kWh = bldgMonthlyProfile.Total_kWh .* ... 
+        bldgs(bldgIdx).AnnualElectricUsageTable.TotalkWh(1) ./ sum(bldgMonthlyProfile.Total_kWh);
+    bldgMonthlyProfile.Base_kWh = bldgMonthlyProfile.Base_kWh .* ... 
+        bldgs(bldgIdx).AnnualElectricUsageTable.Base(1) ./ sum(bldgMonthlyProfile.Base_kWh);
+    bldgMonthlyProfile.Heat_kWh = bldgMonthlyProfile.Heat_kWh .* ... 
+        bldgs(bldgIdx).AnnualElectricUsageTable.Heat(1) ./ sum(bldgMonthlyProfile.Heat_kWh);
+    bldgMonthlyProfile.Cool_kWh = bldgMonthlyProfile.Cool_kWh .* ... 
+        bldgs(bldgIdx).AnnualElectricUsageTable.Cool(1) ./ sum(bldgMonthlyProfile.Cool_kWh);
     bldgs(bldgIdx).MonthlyElectricProfile = bldgMonthlyProfile;
+
 
 end  % for loop buildings analysis    
 

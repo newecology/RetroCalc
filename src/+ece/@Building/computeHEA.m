@@ -36,19 +36,109 @@ numBRs = sum(bldg.NumberOfBedroomUnits .* [1, 2, 3, 4]);
 
 %% Compute Main Utilities.
 % Pull in total utility usages for the building.
-hea.Electricity_kWh = bldg.AnnualElectricUsageTable.TotalkWh(1);
-hea.Gas_therms = bldg.AnnualGasUsageTable.TotalTherms(1);
-hea.Water_gallons = bldg.AnnualWaterUsageTable.Gallons(1);
-hea.Oil_gallons = bldg.AnnualOilUsageTable.TotalGallons(1);
-hea.Propane_gallons = bldg.AnnualPropaneUsageTable.TotalGallons(1);
+if (~isempty(bldg.AnnualElectricUsageTable))
+  hea.Electricity_kWh = bldg.AnnualElectricUsageTable.TotalkWh(1);
+else
+  hea.Electricity_kWh=0;
+end
+if (~isempty(bldg.AnnualGasUsageTable))
+  hea.Gas_therms = bldg.AnnualGasUsageTable.TotalTherms(1);
+else
+  hea.Gas_therms=0;
+end
+if (~isempty(bldg.AnnualWaterUsageTable))
+    hea.Water_gallons = bldg.AnnualWaterUsageTable.Gallons(1);
+else   
+    hea.Water_gallons=0;
+end
+if (~isempty(bldg.AnnualOilUsageTable))
+   hea.Oil_gallons = bldg.AnnualOilUsageTable.TotalGallons(1);
+else
+    hea.Oil_gallons=0;
+end
+if (~isempty(bldg.AnnualPropaneUsageTable))
+    hea.Propane_gallons = bldg.AnnualPropaneUsageTable.TotalGallons(1);
+else
+    hea.Propane_gallons=0;
+end
+%% Initializing tables if empty 
+if (isempty(bldg.AnnualElectricUsageTable))
+    bldg.AnnualElectricUsageTable = table(...
+    repmat({''}, 6, 1), ...  % Property (string/cell array)
+    zeros(6, 1), ...          % MeterCount
+    zeros(6, 1), ...          % HDD65
+    zeros(6, 1), ...          % CDD70
+    zeros(6, 1), ...          % TotalkWh
+    zeros(6, 1), ...          % Base
+    zeros(6, 1), ...          % DHW
+    zeros(6, 1), ...          % Heat
+    zeros(6, 1), ...          % Cool
+    zeros(6, 1), ...          % BasePlusDHW
+    zeros(6, 1), ...          % Cost
+    zeros(6, 1), ...          % HeatSlope
+    zeros(6, 1), ...          % CoolSlope
+    'VariableNames', {'Property', 'MeterCount', 'HDD65', 'CDD70', 'TotalkWh', ...
+                      'Base', 'DHW', 'Heat', 'Cool', 'BasePlusDHW', 'Cost', ...
+                      'HeatSlope', 'CoolSlope'});
+end
+if (isempty(bldg.AnnualGasUsageTable))
+   
+  bldg.AnnualGasUsageTable = table(...
+    repmat({''}, 6, 1), ...  % Property (string/cell array)
+    zeros(6, 1), ...          % MeterCount
+    zeros(6, 1), ...          % HDD65
+    zeros(6, 1), ...          % TotalTherms
+    zeros(6, 1), ...          % StoveDryerTherms
+    zeros(6, 1), ...          % DHWTherms
+    zeros(6, 1), ...          % SpaceHeatTherms
+    zeros(6, 1), ...          % Cost
+    zeros(6, 1), ...          % HeatSlope
+    'VariableNames', {'Property', 'MeterCount', 'HDD65', 'TotalTherms', ...
+                      'StoveDryerTherms', 'DHWTherms', 'SpaceHeatTherms', 'Cost', 'HeatSlope'});
+end
+
+if (isempty(bldg.AnnualOilUsageTable))
+   bldg.AnnualOilUsageTable = table(...
+    repmat({''}, 6, 1), ...  % Property (string/cell array)
+    zeros(6, 1), ...          % MeterCount
+    zeros(6, 1), ...          % HDD65
+    zeros(6, 1), ...          % TotalGallons
+    zeros(6, 1), ...          % DHWGallons
+    zeros(6, 1), ...          % SpaceHeatGallons
+    zeros(6, 1), ...          % DHWkBtu
+    zeros(6, 1), ...          % SpaceHeatkBtu
+    zeros(6, 1), ...          % Cost
+    zeros(6, 1), ...          % HeatSlope
+    'VariableNames', {'Property', 'MeterCount', 'HDD65', 'TotalGallons', ...
+                      'DHWGallons', 'SpaceHeatGallons', 'DHWkBtu', 'SpaceHeatkBtu', ...
+                      'Cost', 'HeatSlope'});
+end
+%if (isempty(bldg.AnnualPropaneUsageTable))
+disp(isempty(bldg.AnnualPropaneUsageTable))
+if (isempty(bldg.AnnualPropaneUsageTable))
+    bldg.AnnualPropaneUsageTable = table(...
+    repmat({''}, 6, 1), ...  % Property (string/cell array)
+    zeros(6, 1), ...          % MeterCount
+    zeros(6, 1), ...          % HDD65
+    zeros(6, 1), ...          % TotalGallons
+    zeros(6, 1), ...          % StoveDryerGallons
+    zeros(6, 1), ...          % DHWGallons
+    zeros(6, 1), ...          % SpaceHeatGallons
+    zeros(6, 1), ...          % Cost
+    zeros(6, 1), ...          % HeatSlope
+    'VariableNames', {'Property', 'MeterCount', 'HDD65', 'TotalGallons', ...
+                      'StoveDryerGallons', 'DHWGallons', 'SpaceHeatGallons', ...
+                      'Cost', 'HeatSlope'});
+end
 
 %% Compute EUI
 % Pull in EUI calculations for electricity and fossil fuels (gas, oil, 
 % and propane). Energy Use Index in kBtu/ft2.
-hea.EUI = bldg.AnnualElectricUsageTable.TotalkWh(3) + ...
-    bldg.AnnualGasUsageTable.TotalTherms(3) + ...
-    bldg.AnnualOilUsageTable.TotalGallons(3) + ...
-    bldg.AnnualPropaneUsageTable.TotalGallons(3);
+eui = [bldg.AnnualElectricUsageTable.TotalkWh(3)  ...
+    bldg.AnnualGasUsageTable.TotalTherms(3)  ...
+    bldg.AnnualOilUsageTable.TotalGallons(3)  ...
+    bldg.AnnualPropaneUsageTable.TotalGallons(3)];
+hea.EUI = sum(eui(~isnan(eui)));
 
 %% Compute Annual Costs of all Utilities
 % Each cost corresponds to a utility. If a building does not have
@@ -60,12 +150,12 @@ hea.AnnualCostOfOil = bldg.AnnualOilUsageTable.Cost(1);
 hea.AnnualCostOfPropane = bldg.AnnualPropaneUsageTable.Cost(1);
 
 % Total combined cost
-hea.AnnualCostTotal = ...
-    hea.AnnualCostOfElectricity + ...
-    hea.AnnualCostOfWater + ...
-    hea.AnnualCostOfGas + ...
-    hea.AnnualCostOfOil + ...
-    hea.AnnualCostOfPropane;
+cost = [hea.AnnualCostOfElectricity  ...
+    hea.AnnualCostOfWater  ...
+    hea.AnnualCostOfGas  ...
+    hea.AnnualCostOfOil  ...
+    hea.AnnualCostOfPropane];
+hea.AnnualCostTotal = sum(cost(~isnan(cost)));
 
 %% Compute CO2e Usage
 % Convert therms/gallons/kWh to equivalent CO2 usage using Mass Rates
@@ -82,7 +172,8 @@ CO2eOil = hea.Oil_gallons * oilRate;
 CO2ePropane = hea.Propane_gallons * propaneRate;
 
 % Compute final CO2 usage per area. kg/ft2 per year.
-hea.CO2e = (CO2eElectricity + CO2eGas + CO2eOil + CO2ePropane) / bca;
+co2e = [CO2eElectricity  CO2eGas  CO2eOil  CO2ePropane];
+hea.CO2e = sum(co2e(~isnan(co2e)))/ bca;
 
 %% Compute Water Usage
 % Residential and nonresidential usages.
@@ -104,10 +195,11 @@ hea.SpaceHeatOil_kBtu = bldg.AnnualOilUsageTable.SpaceHeatkBtu(1);
 hea.SpaceHeatPropane_gallons = bldg.AnnualPropaneUsageTable.SpaceHeatGallons(1);
 
 % Convert Values to kBtu per ft2.
-hea.SpaceHeat_kBtuFt2 = ((hea.SpaceHeatGas_therms * 1e5) + ...
-    (bldg.AnnualOilUsageTable.SpaceHeatkBtu(1) * 1e3) + ...
-    (bldg.AnnualPropaneUsageTable.SpaceHeatGallons(1) * 91500) + ...
-    (hea.SpaceHeat_kWh * 3413)) / 1e3 / bca;
+spaceHt = [hea.SpaceHeatGas_therms * 1e5  ...
+    bldg.AnnualOilUsageTable.SpaceHeatkBtu(1) * 1e3  ...
+    bldg.AnnualPropaneUsageTable.SpaceHeatGallons(1) * 91500  ...
+    hea.SpaceHeat_kWh * 3413];
+hea.SpaceHeat_kBtuFt2 = sum(spaceHt(~isnan(spaceHt))) / 1e3 / bca;
 
 % Space Cooling
 hea.SpaceCool_kWh = bldg.AnnualElectricUsageTable.Cool(1);
@@ -122,9 +214,11 @@ hea.DHWOil_kBtu = bldg.AnnualOilUsageTable.DHWkBtu(1);
 hea.DHWPropane_gallons = bldg.AnnualPropaneUsageTable.DHWGallons(1);
 
 % Convert physical units to kBtu
-hea.DHW_kBtuFt2 = ((hea.DHW_kWh * 3413) + (hea.DHWGas_therms * 1e5) + ...
-    (hea.DHWOil_kBtu * 1e3) + ...
-    (hea.DHWPropane_gallons * 91500)) / 1e3/ bca;
+
+dhw = [(hea.DHW_kWh * 3413)  (hea.DHWGas_therms * 1e5)  ...
+    (hea.DHWOil_kBtu * 1e3)  ...
+    (hea.DHWPropane_gallons * 91500)];
+hea.DHW_kBtuFt2 = sum(dhw(~isnan(dhw))) / 1e3/ bca;
 
 %% Compute Other Values
 % NonHVAC electricity usage in kBtu per ft2.
@@ -132,12 +226,22 @@ hea.DHW_kBtuFt2 = ((hea.DHW_kWh * 3413) + (hea.DHWGas_therms * 1e5) + ...
 % for lights, plug loads, appliances, fans, and pumps.
 hea.NonHVACelec_kBtuFt2 = bldg.AnnualElectricUsageTable.Base(1) * 3413 ...
     / 1e3 / bca;
+
+% NonHVAC electricity usage in kwh
+hea.NonHVACelec_kWh = bldg.AnnualElectricUsageTable.Base(1);
+
 % Appliance fuel usage in kBtu per ft2.
 % Includes natural gas and propane used for cooking and clothes drying.
 % Does not include heating of domestic hot water.
 hea.ApplianceFuel_kBtuFt2 = ((bldg.AnnualGasUsageTable.StoveDryerTherms(1) * 1e5) + ...
     (bldg.AnnualPropaneUsageTable.StoveDryerGallons(1) * 91500)) ...
     / 1e3 / bca;
+
+% Appliance fuel in Therms
+hea.ApplianceFuel_Therms = bldg.AnnualGasUsageTable.StoveDryerTherms(1) + ...
+     bldg.AnnualPropaneUsageTable.StoveDryerGallons(1) * 0.916;
+
+
 
 %% Compute Unit Costs
 % Unit costs are computed as the ratio of annual utility unit used over the

@@ -50,6 +50,7 @@ end % if statement
 bldgMeters = zeros(numMeters, numBuildings);
 bldgMeters = oilRatios > 0;
 
+
 %% Analyze usage for each meter
 
 for meterIdx = 1:numMeters
@@ -404,6 +405,7 @@ for bldgIdx = 1:numBuildings
         'VariableTypes',["string", repmat("double", 1, numBldgUsageVariables-1)], ...
         'VariableNames', bldgUsageVariables);
 
+
     % Create Default Table for Accumulating Statistics
     buildingStatsTbl = table('Size',[3, numBldgUsageVariables],...
         'VariableTypes',["string", repmat("double", 1, numBldgUsageVariables-1)], ...
@@ -527,6 +529,7 @@ for bldgIdx = 1:numBuildings
             / oilMeters(meter).AnnualUsageTable.Gallons(1);
         totalUseMeters(meterIdx) = oilMeters(meter).AnnualUsageTable.Gallons(1);
     end % for loop unit cost
+
     avgUnitCostGas = sum((unitCostOil .* totalUseMeters)) / sum(totalUseMeters);
 
     % Determine the cost of oil for each year and for the average year.
@@ -578,7 +581,7 @@ for bldgIdx = 1:numBuildings
    
     % Clear any nan's from slope variables.
     buildingUsageTbl.HeatSlope(isnan(buildingUsageTbl.HeatSlope)) = 0;
-    
+
     % Write the annual usage table and monthly profile for the building into
     % its allocated properties
     bldgs(bldgIdx).AnnualOilUsageTable = buildingUsageTbl;
@@ -588,6 +591,10 @@ for bldgIdx = 1:numBuildings
      bldgs(bldgIdx).MonthlyOilProfile = array2table(sumMonthlyProfiles, ...
         "VariableNames", ["Month", "DHWGallons",...
         "SpaceHeatGallons", "TotalGallons"]);
+    % Normalize monthly profile results with annual results total
+        % Normalizing the monthly profile values with the Annual Usage totals
+     % bldgMonthlyProfile.Total = bldgMonthlyProfile.Total * ... 
+     %     bldgs(bldgIdx).AnnualGasUsageTable.TotalTherms(1)/sum(bldgMonthlyProfile.Total);
     
 end % building loop
 

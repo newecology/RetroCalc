@@ -50,6 +50,22 @@ end % if statement
 bldgMeters = zeros(numMeters, numBuildings);
 bldgMeters = gasRatios > 0;
 
+% Initialize AnnualGasUsageTable
+% Initialize the table with 6 rows and 9 columns
+for bIdx = 1:numBuildings
+  bldgs(bIdx).AnnualGasUsageTable = table(...
+    repmat({''}, 6, 1), ...  % Property (string/cell array)
+    zeros(6, 1), ...          % MeterCount
+    zeros(6, 1), ...          % HDD65
+    zeros(6, 1), ...          % TotalTherms
+    zeros(6, 1), ...          % StoveDryerTherms
+    zeros(6, 1), ...          % DHWTherms
+    zeros(6, 1), ...          % SpaceHeatTherms
+    zeros(6, 1), ...          % Cost
+    zeros(6, 1), ...          % HeatSlope
+    'VariableNames', {'Property', 'MeterCount', 'HDD65', 'TotalTherms', ...
+                      'StoveDryerTherms', 'DHWTherms', 'SpaceHeatTherms', 'Cost', 'HeatSlope'});
+end
 %% Determine gas usage for cooking and clothes drying for each building
 
 % Size the vectors for gas cooking/drying usage in each building.
@@ -925,10 +941,19 @@ for bldgIdx = 1:numBuildings
     bldgMonthlyProfile.StoveDryerTherms = bldgsAnnualGasCookDryUsage(bldgIdx) * ...
         ones(12, 1) / 12;
     bldgMonthlyProfile.Total = sum(bldgMonthlyProfile{:, 2:4}, 2);
+
+    % Normalizing the monthly profile values with the Annual Usage totals
+     bldgMonthlyProfile.Total = bldgMonthlyProfile.Total * ... 
+         bldgs(bldgIdx).AnnualGasUsageTable.TotalTherms(1)/sum(bldgMonthlyProfile.Total);
+     bldgMonthlyProfile.SpaceHeatTherms = bldgMonthlyProfile.SpaceHeatTherms * ... 
+         bldgs(bldgIdx).AnnualGasUsageTable.SpaceHeatTherms(1)/sum(bldgMonthlyProfile.SpaceHeatTherms);
+     bldgMonthlyProfile.DHWTherms = bldgMonthlyProfile.DHWTherms * ... 
+         bldgs(bldgIdx).AnnualGasUsageTable.DHWTherms(1)/sum(bldgMonthlyProfile.DHWTherms);
+
     bldgs(bldgIdx).MonthlyGasProfile = bldgMonthlyProfile;
 
 end % building loop line 421
 
-end %function
+end %functionace
 
 

@@ -30,7 +30,7 @@ end %forloop (electric meters)
 
 % Analyze the utility data to break out end uses where possible and develop 
 % usage for each building.
-numYearsToAvg = 5;
+numYearsToAvg = 10;
 site.Buildings.analyzeElectricity(site.ElectricMeters, site.BuildingElecRatios, ...
     histDDTable, numYearsToAvg);
 
@@ -84,11 +84,13 @@ end %forloop (gas meters)
 
 % Analyze the utility data to break out end uses where possible and develop 
 % usage for each building.
-site.Buildings.analyzeOil(...
-    site.OilMeters, ...
-    site.BuildingOilRatios, ...
-    histDDTable, ...
-    numYearsToAvg);
+if (numel(site.OilMeters)>0)
+   site.Buildings.analyzeOil(...
+      site.OilMeters, ...
+      site.BuildingOilRatios, ...
+      histDDTable, ...
+      numYearsToAvg);
+end % end if
 
 %% Process Propane Utility and Building Usages
 % Set up adjusted use table for each propane utility, and then process each
@@ -102,8 +104,9 @@ end %forloop (gas meters)
 % Analyze the utility data to break out end uses where possible and develop 
 % usage for each building.
 numYearsToAvg = 5;
-site.Buildings.analyzePropane(site.PropaneMeters, site.BuildingPropaneRatios, ...
+if (numel(site.OilMeters)>0)
+   site.Buildings.analyzePropane(site.PropaneMeters, site.BuildingPropaneRatios, ...
     histDDTable, numYearsToAvg);
-
+end % end if
 end %function
 

@@ -395,20 +395,29 @@ DHWInput12_galPropane = zeros(numDHWsystems, 12);
 for n = 1:numDHWsystems
     if obj.DHWsystems(n).WaterHeaterType == "GasFiredHeaterWithIndirectTank" || ...
             obj.DHWsystems(n).WaterHeaterType == "GasFiredTank" || ...
-            obj.DHWsystems(n).WaterHeaterType == "DemandGas"
+            obj.DHWsystems(n).WaterHeaterType == "DemandGas" 
+            % obj.DHWsystems(n).WaterHeaterType_numeric == 1 || ...
+            % obj.DHWsystems(n).WaterHeaterType_numeric == 2 || ...
+            % obj.DHWsystems(n).WaterHeaterType_numeric == 3
+
 
         DHWInput12_therms(n, :) = DHWheaterInputEnergy12(n, :) / 100;  % therms gas
 
     elseif obj.DHWsystems(n).WaterHeaterType == "OilFiredTank" || ...
-            obj.DHWsystems(n).WaterHeaterType == "OilFiredHeaterWithIndirectTank"
+            obj.DHWsystems(n).WaterHeaterType == "OilFiredHeaterWithIndirectTank" 
+            % obj.DHWsystems(n).WaterHeaterType_numeric == 4 ||...
+            % obj.DHWsystems(n).WaterHeaterType_numeric == 5
         
         DHWInput12_galOil(n, :) = DHWheaterInputEnergy12(n, :) * 1000 ...
-            / 139000                    % gallons of heating oil
+            / 139000           ;         % gallons of heating oil
     
     elseif obj.DHWsystems(n).WaterHeaterType == "PropaneFiredHeaterWithIndirectTank" || ...
             obj.DHWsystems(n).WaterHeaterType == "PropaneFiredTank"
+            % obj.DHWsystems(n).WaterHeaterType_numeric == 6 || ...
+            % obj.DHWsystems(n).WaterHeaterType_numeric == 7
+
         DHWInput12_galPropane(n, :) = DHWheaterInputEnergy12(n, :) * 1000 ...
-            / 91000                    % gallons of propane
+            / 91000            ;        % gallons of propane
     
     
     else 
@@ -419,13 +428,13 @@ for n = 1:numDHWsystems
 end  % for loop
 
 % sum the fuel use of each type, monthly and annual
-allElectricDHWInput12_kWh = sum(DHWInput12_kWh);
+allElectricDHWInput12_kWh = sum(DHWInput12_kWh,1);
 
-allGasDHWInput12_therms = sum(DHWInput12_therms);
+allGasDHWInput12_therms = sum(DHWInput12_therms,1);
 
-allOilDHWInput12_galOil = sum(DHWInput12_galOil);
+allOilDHWInput12_galOil = sum(DHWInput12_galOil,1);
 
-allPropaneDHWInput12_galPropane = sum(DHWInput12_galPropane);
+allPropaneDHWInput12_galPropane = sum(DHWInput12_galPropane,1);
 
 % Make a tabel to transmit this information to the building.
 % The 1st row is electricity in kWh, 2nd row gas in therms, 3rd row heating
@@ -433,7 +442,7 @@ allPropaneDHWInput12_galPropane = sum(DHWInput12_galPropane);
 fuelArray = [allElectricDHWInput12_kWh; allGasDHWInput12_therms; ...
     allOilDHWInput12_galOil; allPropaneDHWInput12_galPropane];
 fuelArray = [fuelArray, sum(fuelArray, 2)];
-fuelArray = [fuelArray; [sum(DHWheaterInputEnergy12), allDHWheatersInputAnnual_kBtu]];
+fuelArray = [fuelArray; [sum(DHWheaterInputEnergy12,1), allDHWheatersInputAnnual_kBtu]];
 DHWfuelType = ["Electricity_kWh", "Gas_therms", "HeatingOil_gallons", ...
     "Propane_gallons", "TotalEnergy_kBtu"]';
 DHWfuelTable = array2table(fuelArray, "VariableNames", ...
@@ -497,14 +506,13 @@ for n = 1:numDHWsystems
     DHWintGainsCircLoss12(n, :) = circLoss12(n, :) * obj.DHWsystems(n).CircLossesFracCond;
 end   % for loop
 % internal gains circulation losses for all DHW systems
-allDHWintGainsCircLoss12 = sum(DHWintGainsCircLoss12);
+allDHWintGainsCircLoss12 = sum(DHWintGainsCircLoss12(:));
 
 % Internal gains from DHW controls (very minor). kBtu
 DHWintGainsControls12 = allDHWControls12_kWh * 3413/1000 * mechRmFracCond;
-
 % monthly internal gains for the DHW in the whole building
 allDHWintGains12 = DHWintGainsMechRoom12 + allDHWintGainsCircLoss12 + ...
-    DHWintGainsControls12 ;
+    DHWintGainsControls12; 
 
 %% Make a table showing all DHW energy flows by month and annual
 
@@ -516,8 +524,8 @@ DHWenergy_kBtu = ["Bathroom Sink"; "Kitchen Sink"; "Shower";...
     "Mechanical room pipe/tank losses"; "Circulation losses"; ...
     "Total load"; "DHW heater input"; "Internal gains DHW"];
 
-DHWenergyArray = [usageEnergyEachFixt12; mechRmLoss12; sum(circLoss12); ...
-    sum(heaterLoadEnergy12); sum(DHWheaterInputEnergy12); ...
+DHWenergyArray = [usageEnergyEachFixt12; mechRmLoss12; sum(circLoss12,1); ...
+    sum(heaterLoadEnergy12,1); sum(DHWheaterInputEnergy12,1); ...
     allDHWintGains12];
 DHWenergyArray(:,13) = sum(DHWenergyArray, 2);
 DHWenergyTbl = array2table(DHWenergyArray, "VariableNames", ...

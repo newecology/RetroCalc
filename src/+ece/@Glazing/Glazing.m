@@ -87,9 +87,9 @@ classdef Glazing < handle & matlab.mixin.Copyable
 
         function value = get.GlazedArea(obj)
             %find the glazed area, subtracting the frame area, square feet
-            value = (obj.Width_in - (2 * obj.FrameWidth_in)) * ...
+            value = abs((obj.Width_in - (2 * obj.FrameWidth_in)) * ...
                 (obj.Height_in - (2 * obj.FrameWidth_in)) / ...
-                144 * obj.Quantity;
+                144 * obj.Quantity);
         
         end  %function
 

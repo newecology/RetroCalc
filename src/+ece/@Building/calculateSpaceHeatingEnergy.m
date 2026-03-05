@@ -266,8 +266,8 @@ solarGainsUtilHtg24(1:2:23) = solarGainsUtilHtg;
 
 % Heat balance. Net heating load is the base heat loss less solar and
 % internal gains adjusted by utilization factors. kBtu
-netHtgLoad24 = heatLoss24 - intGainsUtilHtg24 .* intGainsHtgSeason24 - ...
-    solarGainsUtilHtg24 .* solarGainsHtgSeason24;
+netHtgLoad24 = abs(heatLoss24) - abs(intGainsUtilHtg24 .* intGainsHtgSeason24) - ...
+    abs(solarGainsUtilHtg24 .* solarGainsHtgSeason24);
 
 % A period with net heat gain is considered to not need the heating system
 % i.e. lose the negatives if any in swing months.

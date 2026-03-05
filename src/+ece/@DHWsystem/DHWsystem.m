@@ -12,6 +12,7 @@ classdef DHWsystem < handle & matlab.mixin.Copyable
         % demand gas, electric tank, demand electric, heat pump water heater
         WaterHeaterType (1,1) ece.enum.WaterHeaterType = ...
             ece.enum.WaterHeaterType.GasFiredHeaterWithIndirectTank;
+
         
         % does the DHW system have recirculation? 0 = no, 1 = yes
         DHWrecirculation (1,1) logical = true;
@@ -61,6 +62,12 @@ classdef DHWsystem < handle & matlab.mixin.Copyable
         FractionBuildingLoadServed (1,1) double = 0;
 
     end %properties (Public)
+
+    properties(Dependent)
+        % Temporary property to solve the issue of waterHEaterType not
+        % appearing in ECM
+        WaterHeaterType_numeric (1,1) double 
+    end
   
     methods %Internal Methods
         
@@ -68,6 +75,17 @@ classdef DHWsystem < handle & matlab.mixin.Copyable
             %   Construct an instance of this class.
 
         end %function (constructor)
+
+        function value = get.WaterHeaterType_numeric (obj)
+            
+            switch(obj.WaterHeaterType)
+                case obj.WaterHeaterType.GasFiredHeaterWithIndirectTank
+                    value = 1
+            end
+
+        end
+
+            
      
     end %methods (public Internals)
 

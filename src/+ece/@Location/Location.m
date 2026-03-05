@@ -27,6 +27,9 @@ classdef Location < handle & matlab.mixin.Copyable
         % Ground mean annual temperature for the location, °F
         GroundMeanAnnualTemp_F (1,1) double
 
+        CDD_monthly table
+        HDD_monthly table
+
     end %properties (Public, dependent)
 
     % Properties to import from external sources
@@ -97,6 +100,52 @@ classdef Location < handle & matlab.mixin.Copyable
             meanC = mean(dryBulbC, 'omitnan');
             value = meanC * (9/5) + 32;
         end %function
+
+        function value = get.CDD_monthly(obj)
+                        % Extract year and month from dates
+            years = year(obj.HistoricalDDTable.Date);
+            months = month(obj.HistoricalDDTable.Date);
+            
+            % Get unique years
+            uniqueYears = unique(years);
+            
+            
+            value = array2table(zeros(length(uniqueYears), 12), ...
+                'VariableNames', {'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'}, ...
+                'RowNames', string(uniqueYears));
+            
+            % Sum by year and month
+            for i = 1:length(uniqueYears)
+                for m = 1:12
+                    idx = (years == uniqueYears(i)) & (months == m);
+
+                    value{i, m} = sum(obj.HistoricalDDTable.CDD70(idx));
+                end
+            end
+        end
+
+        function value = get.HDD_monthly(obj)
+                        % Extract year and month from dates
+            years = year(obj.HistoricalDDTable.Date);
+            months = month(obj.HistoricalDDTable.Date);
+            
+            % Get unique years
+            uniqueYears = unique(years);
+            
+            
+            value = array2table(zeros(length(uniqueYears), 12), ...
+                'VariableNames', {'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'}, ...
+                'RowNames', string(uniqueYears));
+            
+            % Sum by year and month
+            for i = 1:length(uniqueYears)
+                for m = 1:12
+                    idx = (years == uniqueYears(i)) & (months == m);
+
+                    value{i, m} = sum(obj.HistoricalDDTable.HDD65(idx));
+                end
+            end
+        end
 
     end %methods (Internal)
 
