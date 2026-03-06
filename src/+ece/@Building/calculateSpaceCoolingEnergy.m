@@ -317,11 +317,20 @@ coolControls_kWh = [coolControls_kWh; sum(coolControls_kWh,1)];
 spaceCoolingTable_kWh = spaceCoolingTable_kBtu;
 spaceCoolingTable_kWh{:, 4:16} = ...
     spaceCoolingTable_kWh{:, 4:16} * 1000/3413;
+% Get required number of rows
+nRows = height(spaceCoolingTable_kWh);
+nCols = 13; % columns 4:16
+% Transpose first
+coolControls_transposed = coolControls_kWh';
 
-spaceCoolingTable_kWh;
+% Pad rows with zeros if needed
+[currentRows, ~] = size(coolControls_transposed);
+if currentRows < nRows
+    coolControls_transposed(end+1:nRows, :) = 0;
+
 % Add cool Controls kWh (transpose to fit)
 spaceCoolingTable_kWh{:, 4:16} = spaceCoolingTable_kWh{:, 4:16} + ...
-    coolControls_kWh';
+    coolControls_transposed;
 
 % Write tables to building properties.
 obj.SpaceCoolingTable_kBtu = spaceCoolingTable_kBtu;
