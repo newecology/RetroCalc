@@ -151,7 +151,7 @@ See the next section.
 
 ---
 
-## 🧪 Defining ECMs and Packages in Excel (new!)
+##  Defining ECMs and Packages in Excel (new!)
 
 You do **not** need to write MATLAB code to author measures. Open `examples/example_ECM_Package.xlsx`, edit with Excel's built-in dropdowns, close the file, then:
 
