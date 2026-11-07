@@ -1,0 +1,17 @@
+AFUE vs ThermalEfficiency (why the same number produces different results)
+AFUE is an annualized seasonal average and the code applies it as a flat constant across every OAT so the integrated annual efficiency equals the user's entry exactly.
+ThermalEfficiency is a steady-state nameplate; the code loads the SystemType's reference OAT polynomial (dfCurve) and only shifts its constant term by (defaultEff - userEff). The curve shape dips at low OAT where OA-reset keeps return water above the condensing dew point so the HDD-weighted integral runs below the entered value.
+Example: ThermalEfficiency=0.95 on condGasBoilerOAreset integrates to ~0.89 under Boston TMY (about 6 percentage points below entered). AFUE=0.95 on the same load integrates to 0.95 exactly.
+Rule of thumb: use AFUE when you want the entered value to equal the annual effective efficiency. Use ThermalEfficiency only when you want OAT-dependent condensing behavior and accept that the integrated value will differ from the nameplate.
+
+Side,Unit,CurveShape,InternalConversion,ExampleSystemTypes
+Heating,AFUE,Constant (flat),none,condGasFurnace; nonCondGasOrOilFurnace
+Heating,averageCOP,Constant (flat),none,waterSourceHeatPump; groundSourceHeatPump
+Heating,ASHP_HSPF,Constant (flat),divide by 3.412 to averageCOP,user-entered HSPF for ASHP equipment
+Heating,ThermalEfficiency,Variable (OAT polynomial),none,condGasBoilerOAreset; condGasBoilerNoOAreset; nonCondGasOrOilBoilerOAreset; nonCondGasOrOilBoilerNoOAreset; electricResistance
+Heating,ASHP_COP47F,Variable (OAT polynomial),none,ASHPlessThan6TonsDucted; ASHPlessThan6TonsNonDucted; ASHPorVRFgreaterThan6TonsDucted; ASHPorVRFgreaterThan6TonsNonDucted; PTACorPTHP; air2WaterHeatPump
+Cooling,IPLV,Constant (flat),none,user-entered IPLV (already in COP)
+Cooling,averageCOP,Constant (flat),none,various cooling systems
+Cooling,SEER / SEER2 / IEER,Constant (flat),divide by 3.412 to averageCOP,user-entered seasonal cooling rating
+Cooling,EER / EER2,Variable (OAT polynomial),divide by 3.412 to ASHP_COP95F,user-entered EER for ASHP cooling
+Cooling,ASHP_COP95F,Variable (OAT polynomial),none,ASHP cooling systems
