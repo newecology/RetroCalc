@@ -13,12 +13,12 @@ This is the **open-source backend** of RetroCalc. There is also a desktop UI bui
 
 ## What you can do with it
 
-- 📊 **Historical Energy Analysis (HEA)** — regress utility bills against degree days to split a building's actual use into heating / cooling / DHW / base load, per fuel.
-- 🏗️  **Level 2 model** — compute monthly space heating, cooling, DHW, lighting, equipment, fans, pumps, and appliance energy from component-level inputs (ASHRAE Level 2 depth).
-- 🔁 **Calibrate** the model to real utility bills to tune mechanical efficiencies and schedules.
-- 🧪 **Model ECMs and Packages** — define Energy Conservation Measures (efficiency upgrades, equipment swaps, setpoint changes, insulation, etc.) and see cumulative savings across electricity, gas, oil, propane, water, cost, and CO₂.
-- 📑 **Define ECMs entirely in Excel** — no MATLAB code required to author measures. Drop-in template with Excel dropdowns included.
-- 📤 **Export** per-ECM Level 2 breakdowns to a single Excel workbook for QC or deliverable-ready savings tables.
+- **Historical Energy Analysis (HEA)** — regress utility bills against degree days to split a building's actual use into heating / cooling / DHW / base load, per fuel.
+-   **Level 2 model** — compute monthly space heating, cooling, DHW, lighting, equipment, fans, pumps, and appliance energy from component-level inputs (ASHRAE Level 2 depth).
+-  **Calibrate** the model to real utility bills to tune mechanical efficiencies and schedules.
+-  **Model ECMs and Packages** — define Energy Conservation Measures (efficiency upgrades, equipment swaps, setpoint changes, insulation, etc.) and see cumulative savings across electricity, gas, oil, propane, water, cost, and CO₂.
+-  **Define ECMs entirely in Excel** — no MATLAB code required to author measures. Drop-in template with Excel dropdowns included.
+-  **Export** per-ECM Level 2 breakdowns to a single Excel workbook for QC or deliverable-ready savings tables.
 
 ---
 
@@ -151,7 +151,7 @@ See the next section.
 
 ---
 
-## 🧪 Defining ECMs and Packages in Excel (new!)
+##  Defining ECMs and Packages in Excel (new!)
 
 You do **not** need to write MATLAB code to author measures. Open `examples/example_ECM_Package.xlsx`, edit with Excel's built-in dropdowns, close the file, then:
 
@@ -163,11 +163,11 @@ site.Buildings(1).ECMSummaryTables       % per-ECM breakdown within each Package
 ```
 
 The template ships with:
-- 📋 **Instructions sheet** — column reference, FilterCriteria DSL, Insert DSL, troubleshooting
-- 🗂️  **Packages sheet** — one row per `(Package, step)` — define which ECMs run in which order
-- 🔧 **10 example ECM sheets** covering every operation pattern (update/add/multiply/replace, insert, delete, enum changes, indexed-array edits, filter-by-property, filter-by-index)
-- 🎚️  **Four dropdowns per ECM sheet**: Operation, ObjectOfReference, PropertyToChange (auto-updates to show only the chosen class's properties), UpdateType
-- 💡 **Labeled indexed entries** — `HeatCoolSetpoints(1) — HtgTP1 (day)` lets you target one element of a 1×6 array without replacing the whole vector
+-  **Instructions sheet** — column reference, FilterCriteria DSL, Insert DSL, troubleshooting
+-   **Packages sheet** — one row per `(Package, step)` — define which ECMs run in which order
+-  **10 example ECM sheets** covering every operation pattern (update/add/multiply/replace, insert, delete, enum changes, indexed-array edits, filter-by-property, filter-by-index)
+-   **Four dropdowns per ECM sheet**: Operation, ObjectOfReference, PropertyToChange (auto-updates to show only the chosen class's properties), UpdateType
+-  **Labeled indexed entries** — `HeatCoolSetpoints(1) — HtgTP1 (day)` lets you target one element of a 1×6 array without replacing the whole vector
 
 ⚠️ **Close the workbook in Excel before running MATLAB.** Excel holds a file lock on an open workbook and `readtable` will error with "file is in use."
 
