@@ -12,7 +12,7 @@ arguments
 end %argblock
 
 %% Compute HeatLossCoeff
-% Get HeatLossCoeff Value - Method to calculate the
+% Get HeatLossCoeff Value - Method to calculate theBGWa
 % HeatLossCoeff values from other properties.
 % The Heat Loss Coefficient is found for each 1 foot vertical wall
 % segment, and for each possible floor segment at various depths
@@ -23,11 +23,17 @@ wallBottomSegment = (1:30);
 wallVerticalSegment = wallBottomSegment - wallTopSegment;
 floorDepth = (1:30);
 
+% Segment arrays are integer-indexed foot slices; snap the depth inputs to the
+% nearest whole foot so decimal values don't zero out the floor (==) or silently
+% floor the wall count (<=).
+wallInsulDepth_ft = round(obj.WallInsulDepthBelowGrade_ft);
+basementDepth_ft  = round(obj.BasementDepthBelowGrade_ft);
+
 % Calculating wall resistance for each segment
 % Calculation carried out for 30 feet below grade.
 wallR = (obj.BaseSlabR + obj.BGwallInsulR) .* 1.0 .* ...
-    (obj.WallInsulDepthBelowGrade_ft >= segmentNum) + ...
-    obj.BaseSlabR .* 1 .* (obj.WallInsulDepthBelowGrade_ft < segmentNum);
+    (wallInsulDepth_ft >= segmentNum) + ...
+    obj.BaseSlabR .* 1 .* (wallInsulDepth_ft < segmentNum);
 
 % Calculating floor resistance for each segment
 floorR = ones(1,30) .* (obj.BaseSlabR + obj.BGfloorInsulR);
@@ -89,11 +95,10 @@ BGfloorMonthSegmentHL = BGfloorMonthSegmentHLC .* ...
 % Massachusetts) and segments to be summed by depth below grade, all in kBtu
 % output is a 12 column row vector for the 12 months
 x = ismember((1:12)', [1,2,3,4,5,10,11,12]);
-y = floorDepth <= obj.BasementDepthBelowGrade_ft;
+y = floorDepth <= basementDepth_ft;
 BGwallMonthHeatLoss_kBtu = sum(BGWallMonthSegmentHL .* x .* y, 2);
-z = floorDepth == obj.BasementDepthBelowGrade_ft;
+z = floorDepth == basementDepth_ft;
 BGfloorMonthHeatLoss_kBtu = sum(BGfloorMonthSegmentHL .* x .* z, 2);
-
 
 end %function
 

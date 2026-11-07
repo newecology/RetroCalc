@@ -27,15 +27,19 @@ cdd = cdd(1:24);
 edd = edd(1:24);
 
 % Extract Start/End Months
-startMonth = month(clgStrtDate);
+startMonth  = month(clgStrtDate);
 endingMonth = month(clgEndDate);
+% Real month lengths (handles 30-day months and leap-year Feb).
+daysStartMonth = eomday(year(clgStrtDate), startMonth);
+daysEndMonth   = eomday(year(clgEndDate),   endingMonth);
 
 %Getting the monthly fractions for cooling
 clgSeasonMonthFrac12 = zeros(12,1);
 clgSeasonMonthFrac12(1:startMonth - 1) = zeros;
-clgSeasonMonthFrac12(startMonth) = (31 - day(clgStrtDate))/31;
+% +1 so the start day itself is counted (both season endpoints are inclusive).
+clgSeasonMonthFrac12(startMonth) = (daysStartMonth - day(clgStrtDate) + 1)/daysStartMonth;
 clgSeasonMonthFrac12(startMonth + 1:endingMonth - 1) = ones;
-clgSeasonMonthFrac12(endingMonth) = day(clgStrtDate)/31;
+clgSeasonMonthFrac12(endingMonth) = day(clgEndDate)/daysEndMonth;
 clgSeasonMonthFrac12(endingMonth + 1:12) = zeros;
 
 % Extend the month fraction to the 24 time periods for internal gains
@@ -188,11 +192,70 @@ lossesUtilClg24(2:2:24) = lossesUtilClg;
 % building, the amount that is allowed to decrease cooling load is
 % determined by the cooling utilization factors. all in kBtu
 heatLoss24Sum = heatLoss24(:,numHeatLosses);
+
+% Monthly η application: multiplying each sub-period of heatLoss24Sum by
+% the same monthly utilization factor is mathematically equivalent to
+% applying η to the monthly aggregate (ISO 52016-1:2017 Eq. 101) because
+% the sum commutes with scalar multiplication:
+%   Σ(heatLoss24Sum_p × η_monthly) = η_monthly × Σ heatLoss24Sum_p
+% So the per-period formulation below is already standards-aligned at
+% the monthly aggregate level.
 netClgLoad24 = solarGainsClgSeason24 + intGainsClgSeason24 + ...
     heatLoss24Sum .* lossesUtilClg24;
 
-% Time periods with negative net cooling load do not need cooling.
-netClgLoad24(netClgLoad24 < 0) = 0;
+% ISO 52016-1:2017 Eq. 100 cutoff: if 1/γ_C > 2 (equivalently γ_C < 0.5
+% when γ_C > 0), the whole month's cooling need is zero regardless of
+% η. Physically: envelope losses are more than 2× gains, so the zone
+% self-cools faster than gains can replenish it; the thermostat never
+% calls for active cooling.
+%
+% γ_C is defined with the ISO sign convention (positive Q_C,ht = loss).
+% RetroCalc convention has heatLoss12_RetroCalc > 0 = net inflow (gain),
+% so Q_C,ht_ISO = -heatLoss12_RetroCalc. The flip gives a positive γ_C
+% when the month is loss-dominated.
+heatLoss12_RetroCalc = heatLoss24(1:2:23,numHeatLosses) + ...
+                       heatLoss24(2:2:24,numHeatLosses);
+heatLoss12_iso = -heatLoss12_RetroCalc;
+gains12 = intGainsClgSeason12 + solarGainsClgSeason12;
+gammaC = gains12 ./ heatLoss12_iso;
+% Eq. 100 triggers only when γ_C > 0 (loss-dominated month) AND γ_C < 0.5
+% (gains < 50% of losses). For γ_C ≤ 0 (gain-dominated month) Eq. 135
+% gives η=1 and the normal balance applies.
+eq100Mask12 = (gammaC > 0) & (gammaC < 0.5);
+
+% Within-month handling. Priority order:
+%   1. ISO Eq. 100 cutoff — hard-zero the month regardless of η.
+%   2. Monthly net surplus (sum ≤ 0) — no cooling needed.
+%   3. One sub-period negative, monthly > 0 — absorb the surplus into
+%      the positive sub-period (preserves monthly total; keeps the
+%      day/night efficiency distinction downstream for the OAT-dependent
+%      sysEff24 curve).
+%   4. Both positive — keep as-is.
+% The previous per-period clip (`netClgLoad24(netClgLoad24<0)=0`)
+% discarded within-month nighttime offset and overstated monthly cooling
+% by the surplus magnitude.
+for m = 1:12
+    monthlyTotal = netClgLoad24(2*m-1) + netClgLoad24(2*m);
+    if eq100Mask12(m)
+        % ISO Eq. 100: γ_C < 0.5, no cooling demand.
+        netClgLoad24(2*m-1) = 0;
+        netClgLoad24(2*m)   = 0;
+    elseif monthlyTotal <= 0
+        % Whole month has net surplus — no cooling needed.
+        netClgLoad24(2*m-1) = 0;
+        netClgLoad24(2*m)   = 0;
+    elseif netClgLoad24(2*m-1) < 0
+        % Daytime surplus (rare in cooling season). Absorb into night.
+        netClgLoad24(2*m-1) = 0;
+        netClgLoad24(2*m)   = monthlyTotal;
+    elseif netClgLoad24(2*m) < 0
+        % Nighttime surplus (typical). Absorb into day — daytime cooling
+        % system handles the reduced load at daytime efficiency.
+        netClgLoad24(2*m)   = 0;
+        netClgLoad24(2*m-1) = monthlyTotal;
+    end
+    % Else: both periods positive, keep as-is.
+end
 
 % Determine the efficiency of each cooling system for each of the 24 time
 % periods either as a function of outdoor air temperature, or in some
@@ -285,6 +348,18 @@ spaceCoolingTable_kBtu = [systemTable,monthCoolingTable];
 % Zero out some rows where the load fractions are zero.
 spaceCoolingTable_kBtu(allLoadFractions == 0, :) = [];
 
+% No cooling capacity — write empty tables and return.
+if isempty(spaceCoolingTable_kBtu)
+   % Build a single all-zero row matching the expected column structure
+   % so downstream {end, 4:16} gets zeros(1,13) rather than crashing.
+   zeroRow = [{"Totals"}, {"All"}, {0}, num2cell(zeros(1,13))];
+   obj.SpaceCoolingTable_kBtu = cell2table(zeroRow, ...
+          'VariableNames', ["Cooling System Name","System Type","Load Fraction", ...
+          "January","February","March","April","May","June", ...
+          "July","August","September","October","November","December","Annual"]);
+   obj.SpaceCoolingTable_kWh = obj.SpaceCoolingTable_kBtu;
+   return;
+end
 
 % Make a second table with the units in kWh. Add the minor amount of
 % electricity used by the controls for the cooling only equipment. Controls
@@ -316,7 +391,7 @@ coolControls_kWh = [coolControls_kWh; sum(coolControls_kWh,1)];
 % Copy the kBtu table and convert to kBtu.
 spaceCoolingTable_kWh = spaceCoolingTable_kBtu;
 spaceCoolingTable_kWh{:, 4:16} = ...
-    spaceCoolingTable_kWh{:, 4:16} * 1000/3413;
+    spaceCoolingTable_kWh{:, 4:16} * 1000/3412;
 % Get required number of rows
 nRows = height(spaceCoolingTable_kWh);
 nCols = 13; % columns 4:16
@@ -327,6 +402,7 @@ coolControls_transposed = coolControls_kWh';
 [currentRows, ~] = size(coolControls_transposed);
 if currentRows < nRows
     coolControls_transposed(end+1:nRows, :) = 0;
+end
 
 % Add cool Controls kWh (transpose to fit)
 spaceCoolingTable_kWh{:, 4:16} = spaceCoolingTable_kWh{:, 4:16} + ...

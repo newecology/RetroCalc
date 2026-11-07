@@ -122,24 +122,6 @@ classdef Building < handle & matlab.mixin.Copyable
         % of kg per therm.
         CarbonEqValuePropane_kgPerGallon (1,1) double = 0;
 
-        % BuildingEnvelope: Total building envelope area,including the
-        % sum of glazing, opaque, below grade and slab on grade areas.
-        BuildingEnvelopeArea (1,1) double  = 0;
-
-        % TotalSolarGains: Array of solar gain that enters the building 
-        % for each month, kBtu.
-        TotalSolarGains (12,1) double = zeros(12,1);
-
-        % WeatherMonthly: 6x24 matrix of monthly Weather Data.
-        % 24 columns for time 1 and time 2 in each month
-        % 3 rows for HDD, CDD, enthalpy days as well as 3 more rows 
-        % for avg temp, avg enthalpy, and average wind speed
-        WeatherMonthly (6,24) double = zeros(6,24);
-
-        % BuildingWeatherTable: Table of WeatherDat unique to Building,
-        % derived from Location's WeatherDataTable.
-        BuildingWeatherTable table
-
         % Packages: Collection of Packages to apply to this Building.
         Packages (:,1) ece.Package = ece.Package.empty(0,1);
 
@@ -147,6 +129,30 @@ classdef Building < handle & matlab.mixin.Copyable
 
 
     properties (SetAccess = private, GetAccess = public, SetObservable)
+        % -- Computed Building-Level Properties (not user-editable;
+        %    populated by compute methods in @Building/)
+        %
+        % BuildingEnvelopeArea: Total building envelope area, including
+        % the sum of glazing, opaque, below grade, and slab on grade
+        % areas. Populated by calculateEnvelopeArea.
+        BuildingEnvelopeArea (1,1) double = 0;
+
+        % TotalSolarGains: Array of solar gain that enters the building
+        % for each month, kBtu. Populated by calculateSolarGains.
+        TotalSolarGains (12,1) double = zeros(12,1);
+
+        % WeatherMonthly: 6x24 matrix of monthly Weather Data.
+        % 24 columns for time 1 and time 2 in each month
+        % 3 rows for HDD, CDD, enthalpy days as well as 3 more rows
+        % for avg temp, avg enthalpy, and average wind speed.
+        % Populated by calculateDegreeDays.
+        WeatherMonthly (6,24) double = zeros(6,24);
+
+        % BuildingWeatherTable: Table of WeatherData unique to Building,
+        % derived from Location's WeatherDataTable.
+        % Populated by calculateDegreeDays.
+        BuildingWeatherTable table
+
         % -- Annual Utility Table Properties
         % AnnualElectricUsageTable: Table of annual Electric usage for the
         % building based on provided Meters.
@@ -332,6 +338,11 @@ classdef Building < handle & matlab.mixin.Copyable
         % HeatLossComponentsTable: Table of HeatLoss Component collections.
         HeatLossComponentsTable table
 
+        % SolarGainsTable: Monthly solar gains per glazed surface, with a
+        % trailing Total column and an "Annual" row. Populated by
+        % calculateSolarGains for ECM-diagnostic QC.
+        SolarGainsTable table
+
         % RunStatsTable: The Level2 Output table.
         RunStatsTable table
 
@@ -368,6 +379,13 @@ classdef Building < handle & matlab.mixin.Copyable
         % DisplayECMSummaryTables: Display string version of the
         % ECMSummaryTable that has decimal truncation.
         DisplayECMSummaryTables table
+
+        % HeatGainComponentsTable: Monthly summary of heat gain inputs —
+        % internal gains (heating sensible, cooling total, latent) plus
+        % solar — assembled from InternalGainsArray_kBtu and
+        % TotalSolarGains for ECM-diagnostic QC. Parallels
+        % HeatLossComponentsTable.
+        HeatGainComponentsTable table
 
     end %properties (Dependent)
 
@@ -524,6 +542,37 @@ classdef Building < handle & matlab.mixin.Copyable
 
         end %function (Getter)
 
+
+        function value = get.HeatGainComponentsTable(obj)
+            % Getter for HeatGainComponentsTable.
+            %   Assembles a monthly summary of heat gains for QC alongside
+            %   the HeatLossComponentsTable. Internal gains come from
+            %   InternalGainsArray_kBtu (24x3, [HtgSensible, ClgTotal,
+            %   Latent] per day/night period) collapsed to 12 monthly rows;
+            %   solar from TotalSolarGains (12x1). All values in kBtu.
+
+            intArr   = obj.InternalGainsArray_kBtu;
+            intHtg12 = intArr(1:2:23, 1) + intArr(2:2:24, 1);
+            intClg12 = intArr(1:2:23, 2) + intArr(2:2:24, 2);
+            intLat12 = intArr(1:2:23, 3) + intArr(2:2:24, 3);
+            solar12  = obj.TotalSolarGains(:);
+
+            monthNames = ["January","February","March","April","May","June",...
+                "July","August","September","October","November","December"];
+
+            value = table(intHtg12, intClg12, intLat12, solar12, ...
+                intHtg12 + solar12, intClg12 + solar12, ...
+                'VariableNames', {'Internal_Htg_Sensible', ...
+                                  'Internal_Clg_Total', ...
+                                  'Internal_Latent', ...
+                                  'Solar', ...
+                                  'Total_Htg_Gains', ...
+                                  'Total_Clg_Gains'}, ...
+                'RowNames', monthNames);
+
+        end %function (Getter)
+
+
         function set.Location(obj,value)
             % Setter for Location property.
             %   Pipes the value set into the Location property of the Bldg
@@ -670,6 +719,15 @@ classdef Building < handle & matlab.mixin.Copyable
         % properties.
         computeLevel2(obj);
 
+        % exportResultTables: Method to export ResultTables to a given
+        % single EXCEL file.
+        [statusOK, msg] = exportResultTables(obj,filePath);
+
+        % exportECMDiagnostics: Method to export the intermediate Level 2
+        % detail tables for every ECM step in every Package to a given
+        % EXCEL file.
+        [statusOK, msg] = exportECMDiagnostics(obj,filePath);
+
     end %methods (private)
 
     methods (Access = private)
@@ -810,6 +868,8 @@ classdef Building < handle & matlab.mixin.Copyable
         plotModeledGasComponentContributions(obj, ax);
         plotModeledBuildingHeatLoss(obj, ax);
         plotModeledInternalGainComponentContributions(obj, ax);
+
+        
 
 
     end %methods (public Plot)

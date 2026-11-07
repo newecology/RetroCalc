@@ -3,19 +3,19 @@ classdef PipeDiameter < ece.enum.BaseList
         
     enumeration
         % 3/8 inch and on up. all in inches.
-        .375
-        .5
-        .75
-        1
-        1.25
-        1.5
-        2
-        2.5
-        3
-        4
-        5
-        6
-        8
+        % .375
+        % .5
+        % .75
+        % 1
+        % 1.25
+        % 1.5
+        % 2
+        % 2.5
+        % 3
+        % 4
+        % 5
+        % 6
+        % 8
        
     end % enumeration
 

@@ -32,6 +32,21 @@ end %argblock
 % number of appliance types
 numApplTypes = height(obj.Appliances);
 
+if numApplTypes == 0
+    % No appliances defined — initialize outputs to zero/empty and return
+    obj.ApplianceResultsTable = table("Totals", "", NaN, 0, 0, 0, 0, ...
+    'VariableNames', {'applianceType','subType','fractionUnitsServed', ...
+    'gasUse_therms','elecUse_kWh','intGainsSens_kBtu','intGainsLat_kBtu'});
+    obj.ApplianceEnergyTable12 = array2table(zeros(4, 12), ...
+        'VariableNames', {'Jan','Feb','Mar','Apr','May','Jun', ...
+        'Jul','Aug','Sep','Oct','Nov','Dec'}, ...
+        'RowNames', {'Electric_kWh','Gas_therms', ...
+        'SensibleGains_kBtu','LatentGains_kBtu'});
+    obj.ApplianceEnergyTable12.Properties.Description = ...
+        "Appliance usage by energy type and internal gains";
+    return
+end
+
 % building parameters
 numUnits = obj.NumberOfUnits;
 numOcc = obj.NumberOfOccupants;
@@ -80,8 +95,15 @@ for n = 1:numApplTypes
         index1 = matches(ApplianceDataTbl.Code, obj.Appliances(n).Code);
         const = ApplianceDataTbl.Constant(index1);
         numBRmult = ApplianceDataTbl.AvgNumBRmult(index1);
-        annlEnergy = numUnits * obj.Appliances(n).FracUnitsServed * ...
-            (const + avgNumBedrms * numBRmult);
+        % Scale: Quantity-first (new model). Fallback to legacy
+        % numUnits * FracUnitsServed when Quantity == 0 (pre-existing
+        % saved projects created before Quantity was wired up).
+        if obj.Appliances(n).Quantity > 0
+            scale = obj.Appliances(n).Quantity;
+        else
+            scale = numUnits * obj.Appliances(n).FracUnitsServed;
+        end
+        annlEnergy = scale * (const + avgNumBedrms * numBRmult);
         % annlEnergy is a (1,2) vector.
 
         % case for electric stoves/dryers that only use electricity
@@ -95,10 +117,10 @@ for n = 1:numApplTypes
             obj.Appliances(n).resultsArray(2,1:12) = annlkWh / 365 * daysMonth;
             obj.Appliances(n).resultsArray(3,:) = ...
                 obj.Appliances(n).resultsArray(2,:) ...
-                * 3413 / 1000 * ApplianceDataTbl.IntGainsSensFrac(index1);
+                * 3412 / 1000 * ApplianceDataTbl.IntGainsSensFrac(index1);
             obj.Appliances(n).resultsArray(4,:) = ...
                 obj.Appliances(n).resultsArray(2,:) ...
-                * 3413 / 1000 * ApplianceDataTbl.IntGainsLatFrac(index1);
+                * 3412 / 1000 * ApplianceDataTbl.IntGainsLatFrac(index1);
 
             % case for gas stoves/dryers that use gas and a bit of electrical energy
             % there are two rows of data table values for the gas use and the
@@ -119,11 +141,11 @@ for n = 1:numApplTypes
             obj.Appliances(n).resultsArray(3,:) = ...
                 obj.Appliances(n).resultsArray(1,:) * 100 * ...
                 intGainsSensFracGas + obj.Appliances(n).resultsArray(2,:) ...
-                * 3413 / 1000 * intGainsSensFracElec;
+                * 3412 / 1000 * intGainsSensFracElec;
             obj.Appliances(n).resultsArray(4,:) = ...
                 obj.Appliances(n).resultsArray(1,:) * 100 * ...
                 intGainsLatFracGas + obj.Appliances(n).resultsArray(2,:) ...
-                * 3413 / 1000 * intGainsLatFracElec;
+                * 3412 / 1000 * intGainsLatFracElec;
 
         end % nested if statement for gas or electric appliance
 
@@ -148,24 +170,34 @@ for n = 1:numApplTypes
             index2 = matches(string([obj.PlumbingFixtures.PlumbingFixtureType]), ...
                 "CommonAreaClotheswasher");
         end % if statements for finding loads/week per apartment
-        loadsWeekApartment = obj.PlumbingFixtures(index2).Uses;
+        if ~any(index2)
+           loadsWeekApartment = 0;
+        else
+           loadsWeekApartment = obj.PlumbingFixtures(index2).Uses;
+        end
 
         % knowing loads/week per apartment, match the appliance code to the
         % data table to find electric use per load, and calculate annual kWh
         index3 = matches(ApplianceDataTbl.Code, obj.Appliances(n).Code);
         machineEnergyLoad_kWh = ApplianceDataTbl.MachineEnergyLoad_kWh(index3);
-        annlElectricity_kWh = numUnits * obj.Appliances(n).FracUnitsServed * ...
-            loadsWeekApartment * machineEnergyLoad_kWh * 52;
+        % Scale: Quantity-first; fallback to legacy numUnits * FracUnitsServed.
+        if obj.Appliances(n).Quantity > 0
+            scale = obj.Appliances(n).Quantity;
+        else
+            scale = numUnits * obj.Appliances(n).FracUnitsServed;
+        end
+        annlElectricity_kWh = scale * loadsWeekApartment * ...
+            machineEnergyLoad_kWh * 52;
         % construct the 4x13 results array
         obj.Appliances(n).resultsArray(1:13) = zeros(1,13);
         obj.Appliances(n).resultsArray(2,13)  = annlElectricity_kWh;
         obj.Appliances(n).resultsArray(2,1:12) = annlElectricity_kWh / 365 * daysMonth;
         obj.Appliances(n).resultsArray(3,:) = ...
                 obj.Appliances(n).resultsArray(2,:) ...
-                * 3413 / 1000 * ApplianceDataTbl.IntGainsSensFrac(index3);    
+                * 3412 / 1000 * ApplianceDataTbl.IntGainsSensFrac(index3);    
         obj.Appliances(n).resultsArray(4,:) = ...
                 obj.Appliances(n).resultsArray(2,:) ...
-                * 3413 / 1000 * ApplianceDataTbl.IntGainsLatFrac(index3);
+                * 3412 / 1000 * ApplianceDataTbl.IntGainsLatFrac(index3);
     end % if statement for dishwashers and clothes washers
 
 % 3rd method. refrigerators (and freezers when added) have a third method of finding
@@ -173,18 +205,49 @@ for n = 1:numApplTypes
     if obj.Appliances(n).ApplianceCategory == "Refrigerator"
         index4 = matches(ApplianceDataTbl.Code, obj.Appliances(n).Code);
         refrigeratorAnnual_kWh = ApplianceDataTbl.kWhAnnual(index4);
-        annlElectricity_kWh = numUnits * obj.Appliances(n).FracUnitsServed * ...
-            refrigeratorAnnual_kWh;
+        % Scale: Quantity-first; fallback to legacy numUnits * FracUnitsServed.
+        if obj.Appliances(n).Quantity > 0
+            scale = obj.Appliances(n).Quantity;
+        else
+            scale = numUnits * obj.Appliances(n).FracUnitsServed;
+        end
+        annlElectricity_kWh = scale * refrigeratorAnnual_kWh;
         obj.Appliances(n).resultsArray(1:13) = zeros(1,13);
         obj.Appliances(n).resultsArray(2,13)  = annlElectricity_kWh;
         obj.Appliances(n).resultsArray(2,1:12) = annlElectricity_kWh / 365 * daysMonth;
         obj.Appliances(n).resultsArray(3,:) = ...
                 obj.Appliances(n).resultsArray(2,:) ...
-                * 3413 / 1000 * ApplianceDataTbl.IntGainsSensFrac(index4);    
+                * 3412 / 1000 * ApplianceDataTbl.IntGainsSensFrac(index4);    
         obj.Appliances(n).resultsArray(4,:) = ...
                 obj.Appliances(n).resultsArray(2,:) ...
-                * 3413 / 1000 * ApplianceDataTbl.IntGainsLatFrac(index4);
+                * 3412 / 1000 * ApplianceDataTbl.IntGainsLatFrac(index4);
     end % if statement for refrigerators
+
+    % 4th method. Custom appliance. User supplies annual kWh and/or therms
+    % directly on the object, plus sensible/latent gain fractions.
+    % Scaling: Quantity-first; fallback to numUnits * FracUnitsServed
+    % when Quantity == 0, matching the three legacy branches above.
+    if obj.Appliances(n).ApplianceCategory == "Custom"
+        if obj.Appliances(n).Quantity > 0
+            scale = obj.Appliances(n).Quantity;
+        else
+            scale = numUnits * obj.Appliances(n).FracUnitsServed;
+        end
+        annlTherms = obj.Appliances(n).UserAnnual_therms * scale;
+        annlkWh    = obj.Appliances(n).UserAnnual_kWh    * scale;
+        obj.Appliances(n).resultsArray(1,13) = annlTherms;
+        obj.Appliances(n).resultsArray(2,13) = annlkWh;
+        obj.Appliances(n).resultsArray(1,1:12) = annlTherms / 365 * daysMonth;
+        obj.Appliances(n).resultsArray(2,1:12) = annlkWh    / 365 * daysMonth;
+        % Convert total energy to kBtu, then apply gain fractions.
+        % Gas therms -> kBtu: * 100.  Electric kWh -> kBtu: * 3.412 (D15).
+        totalEnergy_kBtu = obj.Appliances(n).resultsArray(1,:) * 100 + ...
+                           obj.Appliances(n).resultsArray(2,:) * 3.412;
+        obj.Appliances(n).resultsArray(3,:) = totalEnergy_kBtu * ...
+            obj.Appliances(n).SensibleGainFrac;
+        obj.Appliances(n).resultsArray(4,:) = totalEnergy_kBtu * ...
+            obj.Appliances(n).LatentGainFrac;
+    end % if statement for custom appliance
 
 end % for loop appliance types
 
@@ -202,15 +265,19 @@ subType = [obj.Appliances.SubType]';
 subType = [subType; ""];
 allResults = [obj.Appliances.resultsArray];
 gasUse_therms = allResults(1,13:13:end)';
-gasUse_therms(end+1) = sum(gasUse_therms);
+gasUse_therms = [gasUse_therms(:); sum(gasUse_therms(:))];
+
 elecUse_kWh = allResults(2,13:13:end)';
-elecUse_kWh(end+1) = sum(elecUse_kWh);
+elecUse_kWh = [elecUse_kWh(:); sum(elecUse_kWh(:))];
+
 intGainsSens_kBtu = allResults(3,13:13:end)';
-intGainsSens_kBtu(end+1) = sum(intGainsSens_kBtu);
+intGainsSens_kBtu = [intGainsSens_kBtu(:); sum(intGainsSens_kBtu(:))];
+
 intGainsLat_kBtu = allResults(4,13:13:end)';
-intGainsLat_kBtu(end+1) = sum(intGainsLat_kBtu);
+intGainsLat_kBtu = [intGainsLat_kBtu(:); sum(intGainsLat_kBtu(:))];
+
 fractionUnitsServed = [obj.Appliances.FracUnitsServed]';
-fractionUnitsServed(end+1) = NaN; 
+fractionUnitsServed = [fractionUnitsServed(:); NaN];
 
 % table to show annual total energy use for each appliance
 obj.ApplianceResultsTable = table(applianceType, subType, fractionUnitsServed, gasUse_therms, ...

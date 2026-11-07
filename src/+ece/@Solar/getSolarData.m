@@ -20,35 +20,63 @@ end %argblock
 % Assume that the call will work.
 statusOK = true;
 msg = "";
+%% Resolve API Key
+% Prefer a key stored in the environment variable NREL_API_KEY.
+% Falls back to the default key baked into the class constan
+apiKey = getenv("NREL_API_KEY");
+if isempty(apiKey)
+    apiKey = ece.Solar.APIkey;
+end
+%% Attempt API Call — hardcoded URL, then user override, then loud fail
+% Fallback chain: (1) baked-in ece.Solar.QueryURL, (2) URL from user config
+% at fullfile(prefdir,"retrocalc_endpoints.json") under key "pvwatts_url",
+% (3) warn loudly and return empty data.
+primaryUrl  = ece.Solar.QueryURL;
+overrideUrl = util.getEndpointOverride("pvwatts_url");
 
-%% Attempt API Call
-% Since the output of this method depends on the robustness of the API
-% service, a try/catch block is used to trap any API call failures.
+pvWattsData = [];   % default if both attempts fail
 try
-    % -- Attempt Solar API Call
-    % Utilize webread command to extract data.
-    pvWattsData = webread(ece.Solar.QueryURL,...
-        "api_key",ece.Solar.APIkey,...
-        "azimuth",azimuth,...
-        "system_capacity",ece.Solar.SystemCapacity,...
-        "losses",ece.Solar.Losses,...
-        "array_type",ece.Solar.ArrayType,...
-        "module_type",ece.Solar.ModuleType,...
-        "dataset",ece.Solar.DatasetType,...
-        "tilt",tilt,...
-        "lat",latitude, "lon",longitude);
+    pvWattsData = doPVWattsCall(primaryUrl, apiKey, azimuth, tilt, latitude, longitude);
+    return
+catch primaryME
+    if strlength(overrideUrl) > 0 && overrideUrl ~= primaryUrl
+        try
+            pvWattsData = doPVWattsCall(overrideUrl, apiKey, azimuth, tilt, latitude, longitude);
+            warning("Solar:PrimaryURLFailed", ...
+                "Primary Solar URL %s failed (%s); succeeded with override %s from %s.", ...
+                primaryUrl, primaryME.message, overrideUrl, ...
+                fullfile(prefdir,"retrocalc_endpoints.json"));
+            return
+        catch overrideME
+            statusOK = false;
+            msg = sprintf("Both Solar URLs failed. Primary %s → %s. Override %s → %s.", ...
+                primaryUrl, primaryME.message, overrideUrl, overrideME.message);
+            warning("Solar:AllURLsFailed", "%s", msg);
+            return
+        end
+    end
 
-catch ME
-    % -- Solar API Call Failure
-    % Generate a warning message and then output a default empty
-    % pvWattsData structure.
-    pvWattsData = [];
-    statusOK = false;   
-    disp("Failure accessing Solar API.");
-    assignin("base","ME",ME);
+    statusOK = false;
+    msg = sprintf("Solar URL %s failed (%s). No override configured in %s.", ...
+        primaryUrl, primaryME.message, ...
+        fullfile(prefdir,"retrocalc_endpoints.json"));
+    warning("Solar:URLFailed", "%s", msg);
+end
 
-end %try/catch
+end %function
 
 
-end %function 
+function data = doPVWattsCall(url, apiKey, azimuth, tilt, latitude, longitude)
+data = webread(url, ...
+    "api_key",       apiKey, ...
+    "azimuth",       azimuth, ...
+    "system_capacity", ece.Solar.SystemCapacity, ...
+    "losses",        ece.Solar.Losses, ...
+    "array_type",    ece.Solar.ArrayType, ...
+    "module_type",   ece.Solar.ModuleType, ...
+    "dataset",       ece.Solar.DatasetType, ...
+    "tilt",          tilt, ...
+    "lat",           latitude, ...
+    "lon",           longitude);
+end
 

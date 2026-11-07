@@ -92,7 +92,7 @@ end
 if index == 3 | index == 4          % base month numbers on last month
     if index == 3              
         lastMonthNumber = lastStartDateM;
-    else index == 4
+    else 
         lastMonthNumber = lastEndDateM;
     end
 % Count backwards from last month.

@@ -134,7 +134,7 @@ classdef Airmovers < handle & matlab.mixin.Copyable
             %  accessed from other properties of this object.
 
             % Calculate InternalGains_kBtu off InternalGains_kWh
-            value = obj.InternalGains_kWh .* 3.413;
+            value = obj.InternalGains_kWh .* 3.412;
            
         end %function (propGet)
 

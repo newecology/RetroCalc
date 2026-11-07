@@ -55,16 +55,28 @@ alphaC = alphaC0 + tauC / tauC0;
 % reducing the cooling required.
 % Reverse the sign on the "heat loss" so it works with ISO method.
 heatLoss12 = -1 * heatLoss12;
-GLRc = (solarGainsClgSeason12 + intGainsClgSeason12) ./ heatLoss12;
+GLRc = (solarGainsClgSeason12 + intGainsClgSeason12)./heatLoss12;
 GLRc(isinf(GLRc)) = NaN;
 
-% Find the heat loss utilization factors for each month from ISO 13790 formula.
+  % Heat transfer utilization factor for cooling, per ISO 52016-1:2017 Eqs.
+  % 133-135. γ_C = GLRc = Q_C,gn / Q_C,ht (gains over losses). Note the
+  % NEGATIVE exponents on γ_C — previously the code used positive exponents
+  % (the ISO heating-side formula shape), which reversed η's response to the
+  % gain/loss ratio and amplified cooling penalties when envelope R was
+  % improved. See ISO 52016 §6.6.10.3.
 lossesUtilClg = zeros(12,1);
 for n = 1:12
-    if GLRc(n) < 0
+    
+    if GLRc(n) <= 0
+        % Eq. 135: γ_C ≤ 0 (net envelope flow into building, or no gains)
         lossesUtilClg(n) = 1;
-    else 
-        lossesUtilClg(n) = (1 - GLRc(n)^alphaC(n)) / (1 - GLRc(n)^(alphaC(n)+1));
+    elseif GLRc(n) == 1
+        % Eq. 134: special case to avoid 0/0 at the γ_C = 1 inflection
+        lossesUtilClg(n) = alphaC(n) / (alphaC(n) + 1);
+    else
+        % Eq. 133: general case
+        lossesUtilClg(n) = (1 - GLRc(n)^(-alphaC(n))) / ...
+                             (1 - GLRc(n)^(-(alphaC(n)+1)));
     end
 end
 

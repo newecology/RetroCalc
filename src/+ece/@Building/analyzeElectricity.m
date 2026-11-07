@@ -261,6 +261,30 @@ for meterIdx = 1:numMeters
         heatSlope = coeffs(2);
         coolSlope = coeffs(3);
 
+        % Clamp negative regression slopes to zero. A negative slope is
+        % physically impossible (electric heating/cooling can only ADD
+        % load as HDD/CDD rise, never subtract). OLS can return small
+        % negative values from noise, HDD/CDD collinearity in mild
+        % climates, or when the meter's end-use flags don't match reality.
+        % Warn so an auditor can review the flags; clamp so the
+        % downstream heat/cool allocation stays physical.
+        if heatSlope < 0
+            warning("ece:negativeHeatSlope", ...
+                "Electric meter '%s' regression returned negative " + ...
+                "heatSlope (%.4g kWh/HDD). Clamping to 0 — check " + ...
+                "whether IsSpaceHeat is set correctly on this meter.", ...
+                em.Name, heatSlope);
+            heatSlope = 0;
+        end
+        if coolSlope < 0
+            warning("ece:negativeCoolSlope", ...
+                "Electric meter '%s' regression returned negative " + ...
+                "coolSlope (%.4g kWh/CDD). Clamping to 0 — check " + ...
+                "whether IsCooling is set correctly on this meter.", ...
+                em.Name, coolSlope);
+            coolSlope = 0;
+        end
+
         % Use this result to determine the average baseload, and the
         % heating/cooling slopes. Apply the modest sin wave
         % variation to the baseload (peak in December with less daylight
@@ -289,7 +313,17 @@ for meterIdx = 1:numMeters
 
         % Apportion heating cooling amounts for each month according to the 
         % ratio predicted by the regression.
-        heatFrac = (heatSlope * HDD65) ./ (heatSlope * HDD65 + coolSlope * CDD70);
+        % Apportion heating cooling amounts for each month according to
+        % the ratio predicted by the regression. Guard against 0/0 for
+        % months where the denominator is zero (both slopes clamped to
+        % zero after the DG guard, or a month with both HDD=0 and
+        % CDD=0). In those months heatFrac stays 0 and all residual
+        % HVACusage flows to Cool — the slope-clamp warning above
+        % surfaces the underlying flag/data issue.
+        denom = heatSlope * HDD65 + coolSlope * CDD70;
+        heatFrac = zeros(size(HDD65));
+        hasSignal = denom > 0;
+        heatFrac(hasSignal) = (heatSlope * HDD65(hasSignal)) ./ denom(hasSignal);
         coolFrac = 1 - heatFrac;
         em.AdjustedUsageTable.Heat = heatFrac .* HVACusage;
         em.AdjustedUsageTable.Cool = coolFrac .* HVACusage;
@@ -299,11 +333,90 @@ for meterIdx = 1:numMeters
 
     end % if statement for usage flags are base, heat, cool
 
-    %% Meter serves baseload, space cooling, and space heating and DHW
-    % We are not presently able to analyze this case.
+
+
+    %% Meter serves baseload, space heating, and DHW (no cooling)
+% Base and DHW are lumped together since both are present year-round.
+% Heating load is negligible in Jul/Aug, so the summer minimum anchors
+% the Base+DHW floor. Residual above the curve is heating.
+    if em.IsBaseLoad & em.IsSpaceHeat & ~em.IsCooling & em.IsDHW
+
+    % Anchor: Jul/Aug minimum — heating ~ 0, floor = Base + DHW_summer.
+      summerMonthkWh = [em.AdjustedUsageTable.AdjkWh(em.AdjustedUsageTable.Month == 7)', ...
+        em.AdjustedUsageTable.AdjkWh(em.AdjustedUsageTable.Month == 8)'];
+      minBasePlusDHW = mean(mink(summerMonthkWh, 2));
+
+    % Combined amplitude: base (slight Dec peak) + DHW (Jan peak).
+      amp = em.BaseElecAmplitude + em.SeasonalAmpDHWUse;
+
+    % Cosine curve anchored at summer minimum.
+    % Phase shift of pi/6 moves peak from December to January (DHW-driven).
+    % At July (month 7): output = minBasePlusDHW (minimum).
+    % At January (month 1): output = minBasePlusDHW * (1 + amp) (maximum).
+      basePlusDHWPerMonth = minBasePlusDHW .* ...
+        ((1 + (amp/2)) + ...
+        (amp / 2) .* ...
+        cos(em.AdjustedUsageTable.Month .* (pi/6) - (pi/6)));
+
+    % Cap at actual usage — curve should never exceed AdjkWh but guard anyway.
+      em.AdjustedUsageTable.BasePlusDHW = min(...
+        basePlusDHWPerMonth, em.AdjustedUsageTable.AdjkWh);
+
+    % Residual is heating.
+      em.AdjustedUsageTable.Heat = em.AdjustedUsageTable.AdjkWh ...
+        - em.AdjustedUsageTable.BasePlusDHW;
+
+    % Cool column remains zero as initialized.
+
+    end % if for baseload, space heating, and DHW
+ 
+
+%% Meter serves baseload, space heating, cooling, and DHW
+% Base and DHW are lumped. Neither summer nor winter is clean:
+% summer carries cooling load, winter carries heating load.
+% May and September are used to anchor the Base+DHW floor since
+% both heating and cooling loads are minimal in those months.
+% HDD65/CDD70 in the table partition the residual between heating
+% and cooling without hardcoded season assignments.
     if em.IsBaseLoad & em.IsSpaceHeat & em.IsCooling & em.IsDHW
-     
-    end  % if statement for meter serving base, heat, cool, and DHW
+
+    % Anchor: May/Sep minimum — least heating and cooling contamination.
+      shoulderMonthkWh = [em.AdjustedUsageTable.AdjkWh(em.AdjustedUsageTable.Month == 5)', ...
+        em.AdjustedUsageTable.AdjkWh(em.AdjustedUsageTable.Month == 9)'];
+      minBasePlusDHW = mean(mink(shoulderMonthkWh, 2));
+
+    % Combined amplitude: base + DHW.
+      amp = em.BaseElecAmplitude + em.SeasonalAmpDHWUse;
+
+    % Cosine curve — same phase as Case 1 (January peak, July trough).
+      basePlusDHWPerMonth = minBasePlusDHW .* ...
+        ((1 + (amp/2)) + ...
+        (amp / 2) .* ...
+        cos(em.AdjustedUsageTable.Month .* (pi/6) - (pi/6)));
+
+    % Cap at actual usage.
+      em.AdjustedUsageTable.BasePlusDHW = min(...
+        basePlusDHWPerMonth, em.AdjustedUsageTable.AdjkWh);
+
+    % Residual carries both heating and cooling.
+      residual = em.AdjustedUsageTable.AdjkWh ...
+        - em.AdjustedUsageTable.BasePlusDHW;
+
+    % Partition residual using HDD65 and CDD70 from the table.
+    % In months where only HDD is nonzero: all residual goes to Heat.
+    % In months where only CDD is nonzero: all residual goes to Cool.
+    % In shoulder months where both are nonzero: proportional split.
+    % Guard against months where both are zero (totalDD = 0 means
+    % residual is also ~ 0 so the result is 0/1 = 0, harmless).
+      totalDD = em.AdjustedUsageTable.HDD65 + em.AdjustedUsageTable.CDD70;
+      totalDD(totalDD == 0) = 1;
+
+      em.AdjustedUsageTable.Heat = residual .* ...
+        (em.AdjustedUsageTable.HDD65 ./ totalDD);
+      em.AdjustedUsageTable.Cool = residual .* ...
+        (em.AdjustedUsageTable.CDD70 ./ totalDD);
+
+    end % if for all four end uses
 
 end  % for loop for meters adjusted usage tables
 
@@ -430,29 +543,24 @@ for meterIdx = 1:numMeters
 % Use the historical daily degree day table to find average HDD/year
 % and average CDD/year.
 
-% Convert years to average to number of days (no leap years)
-% numDaysToAvg = numYearsToAvg * 365;
-% lastXYearsIndices = (height(ddTable) + 1 - numDaysToAvg) : height(ddTable);
-% 
-% % Pull out Last X years of HDD/CDD per year.
-% % The below line pulls the last 5 years of the corresponding
-% % column by index, resulting in the last 5 years of results
-% avgHDD = sum(ddTable.HDD65(lastXYearsIndices)) / numYearsToAvg;
-% avgCDD = sum(ddTable.CDD70(lastXYearsIndices)) / numYearsToAvg;
+% Convert years to average to number of days (sloppily, no leap years).
+% Trailing window indexed by row count, matching analyzeGas/Oil/Propane —
+% the prior calendar-year grouping understated avgHDD/avgCDD whenever
+% ddTable ended mid-year.
+numDaysToAvg = numYearsToAvg * 365;
+if numDaysToAvg > height(ddTable)
+    error("ece:insufficientHistoricalDD", ...
+        "Historical degree-day table has %d rows, shorter than the " + ...
+        "requested %d-year averaging window (%d days). " + ...
+        "Reduce Site.NumPastYearsToAverage, or supply more years " + ...
+        "of degree-day data via Location.importHistoricalDDTable.", ...
+        height(ddTable), numYearsToAvg, numDaysToAvg);
+end
+lastXYearsIndices = (height(ddTable) + 1 - numDaysToAvg) : height(ddTable);
 
+avgHDD = sum(ddTable.HDD65(lastXYearsIndices)) / numYearsToAvg;
+avgCDD = sum(ddTable.CDD70(lastXYearsIndices)) / numYearsToAvg;
 
-%Average CDD HDD
-% Get the most recent N years
-allYears = unique(year(ddTable.Date));
-recentYears = allYears(end-numYearsToAvg+1:end);
-
-% Filter and calculate
-idx = ismember(year(ddTable.Date), recentYears);
-
-avgHDD = sum(ddTable.HDD65(idx)) / numYearsToAvg;
-avgCDD = sum(ddTable.CDD70(idx)) / numYearsToAvg;
-
-% 
 
 % Monthly profile starts in January.
 % The monthly profile is a 12 row (per month) and 7-column table.
@@ -509,10 +617,16 @@ for meterIdx = 1:numMeters
     % Note, if there are any NaN's in the monthly table for space heat, the
     % sum of that column will be NaN, elecHeatAdj will be NaN, and calc will
     % fail.
-    elecHeatAdj = normAnnualHeating / sum(monthlyProfile(:, 4));
-    monthlyProfile(:, 4) = elecHeatAdj * monthlyProfile(:, 4);
-    elecCoolAdj = normAnnualCooling / sum(monthlyProfile(:, 5));
-    monthlyProfile(:, 5) = elecCoolAdj * monthlyProfile(:, 5);
+    heatColSum = sum(monthlyProfile(:, 4));
+    if heatColSum > 0
+        elecHeatAdj = normAnnualHeating / heatColSum;
+        monthlyProfile(:, 4) = elecHeatAdj * monthlyProfile(:, 4);
+    end
+    coolColSum = sum(monthlyProfile(:, 5));
+    if coolColSum > 0
+        elecCoolAdj = normAnnualCooling / coolColSum;
+        monthlyProfile(:, 5) = elecCoolAdj * monthlyProfile(:, 5);
+    end
 
     % Clean any NaN
     monthlyProfile(isnan(monthlyProfile)) = 0;
@@ -707,7 +821,7 @@ for bldgIdx = 1:numBuildings
         'VariableNames', variableNames);
     kBtuFt2Row.Property(1) = ["kBtu/ft2"];
     kBtuFt2Row{1, areaColNames} = buildingUsageTbl{end-1, areaColNames} * ...
-        3413 / 1000 / bldgs(bldgIdx).GrossConditionedArea_ft2;
+        3412 / 1000 / bldgs(bldgIdx).GrossConditionedArea_ft2;
 
     % Construct the final version of the building usage table with the rows
     % arranged in a logical manner.

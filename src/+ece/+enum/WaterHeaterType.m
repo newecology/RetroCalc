@@ -8,12 +8,20 @@ classdef WaterHeaterType < ece.enum.BaseList
 
         DemandGas ("Demand Gas")
 
+        OilFiredHeaterWithIndirectTank ("Oil-fired Heater with Indirect Tank")
+
+        OilFiredTank ("Oil-fired Tank")
+
+        PropaneFiredHeaterWithIndirectTank ("Propane-fired Heater with Indirect Tank")
+
+        PropaneFiredTank ("Propane-fired Tank")
+
         ElectricTank ("Electric Tank")
 
         DemandElectric ("Demand Electric")
 
         HeatPumpWaterHeater ("Heat Pump Water Heater")
-       
+
     end % enumeration
 
     % Static Methods

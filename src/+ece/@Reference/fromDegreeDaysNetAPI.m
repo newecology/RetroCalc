@@ -38,7 +38,6 @@ function degreedays_data = fromDegreeDaysNetAPI(latitude, longitude, base_temp_f
 
 %% Importing java libraries
 import java.security.* javax.crypto.* javax.crypto.spec.*
-import java.util.Base64
 
 %% Input validation
 if nargin < 2
@@ -98,7 +97,15 @@ if ~isfield(options, 'security_key')
     options.security_key = 'test-test-test-test-test-test-test-test-test-test-test-test-test';
 end
 if ~isfield(options, 'endpoint')
-    options.endpoint = 'http://apiv1.degreedays.net/json';
+    % Prefer user-configured override from prefdir config; fall back to
+    % the baked-in DegreeDays.net URL. Callers passing options.endpoint
+    % directly are unaffected.
+    overrideUrl = util.getEndpointOverride("degreedays_endpoint");
+    if strlength(overrideUrl) > 0
+        options.endpoint = char(overrideUrl);
+    else
+        options.endpoint = 'http://apiv1.degreedays.net/json';
+    end
 end
 if ~isfield(options, 'breakdown')
     options.breakdown = 'daily';
@@ -163,7 +170,7 @@ try
     %% BUILD COMPLETE REQUEST
     % Generate timestamp and random string for security
     timestamp = char(datetime('now', 'TimeZone', 'UTC', 'Format', 'yyyy-MM-dd''T''HH:mm:ss''Z'''));
-    random_str = char(java.util.UUID.randomUUID());
+    random_str = char(javaMethod('randomUUID', 'java.util.UUID'));
 
     % Build the complete request
     request = struct(...
@@ -192,7 +199,7 @@ try
 
     % Base64URL encode request and signature
 
-    encoder = Base64.getEncoder();
+    encoder = javaMethod('getEncoder', 'java.util.Base64');
 
     % Encode request
     base64_request = char(encoder.encode(uint8(request_json)))';

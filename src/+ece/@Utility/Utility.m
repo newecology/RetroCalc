@@ -124,6 +124,20 @@ classdef  Utility < handle & matlab.mixin.Heterogeneous
 
     methods (Access = public)
 
+        function updateAdjustedTableFromRawTableChange(obj)
+            % updateAdjustedTableFromRawTableChange: Method to retrieve changes
+            % from the RawDataTable into Adjusted and recompute values.
+            %    This SHOULD be called anytime the RawDataTable changes,
+            %    but for now we will not invoke the listener pattern.
+
+            % Overwrite the first four columns of Adjusted with entire Raw.
+            obj.AdjustedUsageTable(:,1:4) = obj.RawUsageTable;
+
+            % Recalculate Additional Rows in Adjusted.
+            obj.correctBilling();
+
+        end %function
+
         function addRowToRawUsageTable(obj,newRowData)
             % addRowToUsageTable: Method to add row data to the bottom of
             % the RawData usage table.

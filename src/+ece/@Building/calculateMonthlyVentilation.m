@@ -121,7 +121,7 @@ totalEffExFlows2Clg = sum(ex .* effAvgCFM2Clg,2);
 totalBalFlows1Htg = min([totalEffSupFlows1Htg, totalEffExFlows1Htg],[],2);
 totalBalFlows2Htg = min([totalEffSupFlows2Htg, totalEffExFlows2Htg],[],2);
 totalBalFlows1Clg = min([totalEffSupFlows1Clg, totalEffExFlows1Clg],[],2);
-totalBalFlows2Clg = min([totalEffSupFlows2Htg, totalEffExFlows2Clg],[],2);
+totalBalFlows2Clg = min([totalEffSupFlows2Clg, totalEffExFlows2Clg],[],2);
 
 % Take the absolue difference.
 totalUnbalFlows1Htg = abs(totalEffSupFlows1Htg - totalEffExFlows1Htg);

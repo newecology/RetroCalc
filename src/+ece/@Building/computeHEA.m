@@ -184,7 +184,11 @@ hea.WaterNonResidential_gallons = ...
     bldg.AnnualWaterUsageTable.AdjGallons(1) - ...
     bldg.AnnualWaterUsageTable.ResidentialGals(1);
 
-hea.Water_GPDBedroom = hea.WaterResidential_gallons / 365 / numBRs;
+if numBRs > 0
+     hea.Water_GPDBedroom = hea.WaterResidential_gallons / 365 / numBRs;
+else
+     hea.Water_GPDBedroom = 0;
+end
 
 %% Compute SpaceHeat/Cooling
 % Get space heating usage for electricity and fossil fuels in energy units
@@ -198,12 +202,12 @@ hea.SpaceHeatPropane_gallons = bldg.AnnualPropaneUsageTable.SpaceHeatGallons(1);
 spaceHt = [hea.SpaceHeatGas_therms * 1e5  ...
     bldg.AnnualOilUsageTable.SpaceHeatkBtu(1) * 1e3  ...
     bldg.AnnualPropaneUsageTable.SpaceHeatGallons(1) * 91500  ...
-    hea.SpaceHeat_kWh * 3413];
+    hea.SpaceHeat_kWh * 3412];
 hea.SpaceHeat_kBtuFt2 = sum(spaceHt(~isnan(spaceHt))) / 1e3 / bca;
 
 % Space Cooling
 hea.SpaceCool_kWh = bldg.AnnualElectricUsageTable.Cool(1);
-hea.SpaceCool_kBtuFt2 = hea.SpaceCool_kWh * 3413 / ...
+hea.SpaceCool_kBtuFt2 = hea.SpaceCool_kWh * 3412 / ...
     1e3 / bca;
 
 %% Compute Domestic Hot Water (DHW) Usage
@@ -215,7 +219,7 @@ hea.DHWPropane_gallons = bldg.AnnualPropaneUsageTable.DHWGallons(1);
 
 % Convert physical units to kBtu
 
-dhw = [(hea.DHW_kWh * 3413)  (hea.DHWGas_therms * 1e5)  ...
+dhw = [(hea.DHW_kWh * 3412)  (hea.DHWGas_therms * 1e5)  ...
     (hea.DHWOil_kBtu * 1e3)  ...
     (hea.DHWPropane_gallons * 91500)];
 hea.DHW_kBtuFt2 = sum(dhw(~isnan(dhw))) / 1e3/ bca;
@@ -223,12 +227,14 @@ hea.DHW_kBtuFt2 = sum(dhw(~isnan(dhw))) / 1e3/ bca;
 %% Compute Other Values
 % NonHVAC electricity usage in kBtu per ft2.
 % Electricity that is not used for heating or cooling. It is used
-% for lights, plug loads, appliances, fans, and pumps.
-hea.NonHVACelec_kBtuFt2 = bldg.AnnualElectricUsageTable.Base(1) * 3413 ...
+% for lights, plug loads, appliances, fans, and pumps. And if DHW is
+% present then it includes BasePlusDHW
+hea.NonHVACelec_kBtuFt2 = bldg.AnnualElectricUsageTable.Base(1) * 3412 ...
+    / 1e3 / bca + bldg.AnnualElectricUsageTable.BasePlusDHW(1) * 3412 ...
     / 1e3 / bca;
 
 % NonHVAC electricity usage in kwh
-hea.NonHVACelec_kWh = bldg.AnnualElectricUsageTable.Base(1);
+hea.NonHVACelec_kWh = bldg.AnnualElectricUsageTable.Base(1) + bldg.AnnualElectricUsageTable.BasePlusDHW(1);
 
 % Appliance fuel usage in kBtu per ft2.
 % Includes natural gas and propane used for cooking and clothes drying.

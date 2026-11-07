@@ -20,15 +20,19 @@ hdd = reshape([obj.DegreeDaysTable.hdd1, obj.DegreeDaysTable.hdd2]',[],1);
 hdd = hdd(1:24);
 
 % Extract Start/End Months
-startMonth = month(htgStrtDate);
+startMonth  = month(htgStrtDate);
 endingMonth = month(htgEndDate);
+% Real month lengths (handles 30-day months and leap-year Feb).
+daysStartMonth = eomday(year(htgStrtDate), startMonth);
+daysEndMonth   = eomday(year(htgEndDate),   endingMonth);
 
 %Getting the monthly fraction for heating
 htgSeasonMonthFrac12 = zeros(12,1);
 htgSeasonMonthFrac12(1:(endingMonth-1)) = ones;
-htgSeasonMonthFrac12(endingMonth) = day(htgEndDate)/31;
+htgSeasonMonthFrac12(endingMonth) = day(htgEndDate)/daysEndMonth;
 htgSeasonMonthFrac12((startMonth+1):12) = ones;
-htgSeasonMonthFrac12(startMonth) = (31-day(htgStrtDate))/31;
+% +1 so the start day itself is counted (both season endpoints are inclusive).
+htgSeasonMonthFrac12(startMonth) = (daysStartMonth-day(htgStrtDate)+1)/daysStartMonth;
 
 % Extend the month fraction to the 24 time periods for internal gains
 htgSeasonMonthFrac24 = zeros(24, 1);
@@ -37,6 +41,7 @@ htgSeasonMonthFrac24(2:2:24,1) = htgSeasonMonthFrac12;
 
 % creating internal gains and solar gains for the heating season only
 % All values are in kBtu.
+
 intGainsHtgSeason24 = obj.InternalGainsArray_kBtu(:,1) .* ...
     htgSeasonMonthFrac24;
 solarGainsHtgSeason12 = obj.TotalSolarGains .* ...
@@ -90,6 +95,8 @@ SlabHLC = zeros(1,numSlab);
 %looping through each object components
 % create a 24 row array with cols for each component for calculations
 % The HLC is constant over all 24 rows.
+OpaqueTypes = ece.enum.OpaqueSurfaceType.empty(1,0);
+GlazedTypes = ece.enum.GlazingType.empty(1,0);
 for i = 1:numOpaque
     OpaqueHLC(i) = obj.OpaqueSurfaces(i).HeatLossCoeff;
     OpaqueTypes(i) = obj.OpaqueSurfaces(i).OpaqueSurfaceType;
@@ -254,6 +261,7 @@ intGainsHtgSeason12 = intGainsHtgSeason24(1:2:23) + ...
     obj.calculateHeatingUtilizationFactors(heatLoss12, ...
     intGainsHtgSeason12, solarGainsHtgSeason12);
 
+
 % Energy balance for the day and night periods of each month
 % Internal gains utilization factors are assumed equal for day and night.
 intGainsUtilHtg24 = zeros(24,1);
@@ -272,7 +280,8 @@ netHtgLoad24 = abs(heatLoss24) - abs(intGainsUtilHtg24 .* intGainsHtgSeason24) -
 % A period with net heat gain is considered to not need the heating system
 % i.e. lose the negatives if any in swing months.
 % This is the heat required for the space.
-netHtgLoad24 = max(netHtgLoad24, 0);
+
+%netHtgLoad24 = max(netHtgLoad24, 0);
 
 % Determine the efficiency of each heating system for each of the 24 time
 % periods either as a function of outdoor air temperature, or in some
@@ -334,9 +343,12 @@ usageTablePeriods = ["January","February","March","April","May","June",...
 % The 24 time periods have served their purpose. Results will be reported
 % in monthly form. Convert heating input24 to input12. Add annual and
 % monthly totals.
+%Clip htgInput24 when htgLoad is negative.
+
 htgInput12 = htgInput24(1:2:23,:) + htgInput24(2:2:24,:);
 htgInput12 = fillmissing(htgInput12, "constant", 0);
 htgInput12MonthTotals = [htgInput12, sum(htgInput12, 2)];
+htgInput12 = max(htgInput12, 0);
 
 % Make a table for monthly heating input for each system with annual
 % totals. Show system name, type, and load fraction.
@@ -372,7 +384,7 @@ monthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]';
 
 % Convert the monthly input for each energy source into the appropriate units.
 htgInput12Elec = ([obj.HeatCool.EnergySource] == "Electricity") ...
-    .* htgInput12 * 1000/3413;                          % kWh (3,413 Btu)
+    .* htgInput12 * 1000/3412;                          % kWh (3,412 Btu)
 
 htgInput12Gas = ([obj.HeatCool.EnergySource] == "Gas") ...
     .* htgInput12 * 1000/100000;                        % therms (100,000 Btu)
@@ -409,7 +421,7 @@ fuelArray = [htgInput12ElecAll, htgInput12GasAll,...
 
 % Sum the Fuel Arrays across Rows after converting to kBtu
 fuelArray_kBtu = sum([...
-    (fuelArray(:,1) * 3413/1000),...
+    (fuelArray(:,1) * 3412/1000),...
     (fuelArray(:,2) * 100),...
     (fuelArray(:,3) * 139000/1000),...
     (fuelArray(:,4) * 91000/1000)],2);

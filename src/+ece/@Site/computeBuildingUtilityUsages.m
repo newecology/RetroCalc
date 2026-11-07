@@ -30,7 +30,7 @@ end %forloop (electric meters)
 
 % Analyze the utility data to break out end uses where possible and develop 
 % usage for each building.
-numYearsToAvg = 10;
+numYearsToAvg = site.NumPastYearsToAverage;
 site.Buildings.analyzeElectricity(site.ElectricMeters, site.BuildingElecRatios, ...
     histDDTable, numYearsToAvg);
 
@@ -45,7 +45,7 @@ end %forloop (gas meters)
 
 % Analyze the utility data to break out end uses where possible and develop 
 % usage for each building.
-numYearsToAvg = 5;
+
 site.Buildings.analyzeGas(site.GasMeters, site.BuildingGasRatios, ...
     histDDTable, numYearsToAvg);
 
@@ -59,19 +59,8 @@ for wm = 1:numel(site.WaterMeters)
     site.WaterMeters(wm).updateAdjustedUsageTable();
 end %forloop (water meters)
 
-% Process Building Usage Tables
-for bd = 1:site.NumBuildings
-    % Annual Usage Table
-    site.Buildings(bd).analyzeWater(...
-        site.WaterMeters,...
-        site.BuildingWaterRatios(:,bd));
-    % 
-    % % Monthly Profile
-    % site.Buildings(bd).createWaterMonthlyProfile(...
-    %     site.WaterMeters,...
-    %     site.BuildingWaterRatios(:,bd));
-
-end %forloop (buildings)
+  % Analyze the utility data to develop usage for each building.
+site.Buildings.analyzeWater(site.WaterMeters, site.BuildingWaterRatios);
 
 %% Process Oil Utility and Building Usages
 % Set up adjusted use table for each oil utility, and then process each
@@ -103,8 +92,7 @@ end %forloop (gas meters)
 
 % Analyze the utility data to break out end uses where possible and develop 
 % usage for each building.
-numYearsToAvg = 5;
-if (numel(site.OilMeters)>0)
+if (numel(site.PropaneMeters)>0)
    site.Buildings.analyzePropane(site.PropaneMeters, site.BuildingPropaneRatios, ...
     histDDTable, numYearsToAvg);
 end % end if

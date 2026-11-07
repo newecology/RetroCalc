@@ -16,6 +16,7 @@ classdef ApplianceType < ece.enum.BaseList
         CommercialDishwashers               ("Commercial Dishwashers")
         CommercialOvenElectric              ("Commercial Oven Electric")
         CommercialGriddleElectric           ("Commercial Griddle Electric")
+        CustomAppliance                     ("Custom Appliance")
     end % enumeration
 
     % Static Methods

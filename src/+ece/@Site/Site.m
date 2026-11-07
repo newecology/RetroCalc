@@ -331,7 +331,7 @@ classdef Site < handle
             %   Returns the value of the computed Cost of Electricity.
 
             % Extract Total Cost and Total Units
-            totalCost = obj.HEA.CostElectricity;
+            totalCost = obj.HEA.AnnualCostOfElectricity;
             totalUnits = obj.HEA.Electricity_kWh;
 
             % Calculate Unit Cost
@@ -345,7 +345,7 @@ classdef Site < handle
             %   Returns the value of the computed Cost of Gas.
 
             % Extract Total Cost and Total Units
-            totalCost = obj.HEA.CostGas;
+            totalCost = obj.HEA.AnnualCostOfGas;
             totalUnits = obj.HEA.Gas_therms;
 
             % Calculate Unit Cost
@@ -359,7 +359,7 @@ classdef Site < handle
             %   Returns the value of the computed Cost of Water.
 
             % Extract Total Cost and Total Units
-            totalCost = obj.HEA.CostWater;
+            totalCost = obj.HEA.AnnualCostOfWater;
             totalUnits = obj.HEA.Water_gallons;
 
             % Calculate Unit Cost
@@ -373,7 +373,7 @@ classdef Site < handle
             %   Returns the value of the computed Cost of Oil
 
             % Extract Total Cost and Total Units
-            totalCost = obj.HEA.CostOil;
+            totalCost = obj.HEA.AnnualCostOfOil;
             totalUnits = obj.HEA.Oil_gallons;
 
             % Calculate Unit Cost
@@ -387,7 +387,7 @@ classdef Site < handle
             %   Returns the value of the computed Cost of Propane
 
             % Extract Total Cost and Total Units
-            totalCost = obj.HEA.CostPropane;
+            totalCost = obj.HEA.AnnualCostOfPropane;
             totalUnits = obj.HEA.Propane_gallons;
 
             % Calculate Unit Cost

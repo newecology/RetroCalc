@@ -1,50 +1,47 @@
 function package = readSourceFromFile(fnmArray, shnArray, pckgName)
-%fineName to provide excel file path for calcInputs file
-%sheetname to provide sheet name that corresponds to this particular ECM
-%   This method will output an array of Airmovers objects, one per the row
+%READSOURCEFROMFILE Build an ece.Package from parallel arrays of Excel
+%  file names and sheet names. Each (file, sheet) pair defines one ECM;
+%  the Package's ECMs are added in the order supplied.
+%
+%  package = ece.Package.readSourceFromFile(fnmArray, shnArray, pckgName)
+%
+%  fnmArray: string array of file paths (length N, or scalar which is
+%            broadcast to all sheets).
+%  shnArray: string array of sheet names (length N).
+%  pckgName: Package.Name for the result.
 
-%% Arguments Block
-% Set input argument validation.
+%% Arguments
 arguments
-    % fnmArray: 
     fnmArray (:,:) string
-
-    % shnArray: 
     shnArray (:,:) string
-
-    % pckgName:
     pckgName (1,1) string
-end %argblock
+end
 
-% Return empty array if none exist.
-emptyCheck = isempty(fnmArray) || isempty(shnArray);
-if(emptyCheck)
+% Empty input → empty Package array.
+if isempty(fnmArray) || isempty(shnArray)
     package = ece.Package.empty(0,1);
     return;
-end %endif
-
-%
-if numel(shnArray) > 1 && numel(shnArray) ~= numel(fnmArray)
-    return
 end
 
-% get Array height
-hgt = numel(ecmArray);
-if isscalar(shnArray)
-    shnArray = repmat(shnArray,hgt,1);
+% Validate / broadcast.
+if isscalar(fnmArray) && ~isscalar(shnArray)
+    fnmArray = repmat(fnmArray, numel(shnArray), 1);
+elseif isscalar(shnArray) && ~isscalar(fnmArray)
+    shnArray = repmat(shnArray, numel(fnmArray), 1);
+elseif numel(fnmArray) ~= numel(shnArray)
+    error("ece:MismatchedFileSheetArrays", ...
+        "fnmArray (len %d) and shnArray (len %d) must have the same length or one must be scalar.", ...
+        numel(fnmArray), numel(shnArray));
 end
 
-%% Iterate through each ECM
-package     = ece.Package;
-package.Name= pckgName;
+%% Build Package
+package      = ece.Package;
+package.Name = pckgName;
 
-for idx = 1:hgt
-    % create ECM object from the file/sheet names
-    thisECM = ece.ECM.ReadSourceFromFile(fnmArray(idx), shnArray(idx));
-
-    % update ECMs array in Package
+for idx = 1:numel(shnArray)
+    % readSourceFromFile is case-sensitive on Linux/macOS — use lowercase.
+    thisECM = ece.ECM.readSourceFromFile(fnmArray(idx), shnArray(idx));
     package.ECMs(idx) = thisECM;
-
-end %forloop (idx)
+end
 
 end %function

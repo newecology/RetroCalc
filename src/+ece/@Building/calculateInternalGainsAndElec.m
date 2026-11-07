@@ -40,7 +40,11 @@ numMonth = (1:12)';
 
 % Normalize the estimates of the number of people in each space to equal
 % the user entered total number of building occupants (if entered).
-estPeopleEachSpace = [obj.Spaces.Area_ft2] ./ [obj.Spaces.Ft2person];
+Ft2personVec = [obj.Spaces.Ft2person];
+areaVec = [obj.Spaces.Area_ft2];
+estPeopleEachSpace = zeros(size(Ft2personVec));
+occupiedMask = Ft2personVec > 0;
+estPeopleEachSpace(occupiedMask) = areaVec(occupiedMask) ./ Ft2personVec(occupiedMask);
 if isnan(obj.NumberOfOccupants)
     peopleEachSpace = estPeopleEachSpace;
 else
@@ -55,6 +59,10 @@ lgtRatio = 1.2;
 lgtAmpltd = lgtRatio - 1;
 lgtMin = 1- (lgtAmpltd/2);
 lgtRatioMonth = lgtMin + lgtAmpltd/2 + (lgtAmpltd/2) *(cos(numMonth*pi/6));
+lightingElecSpace    = zeros(1,0);
+EPDelecSpace         = zeros(1,0);
+peopleIntGainsSensSpace = zeros(1,0);
+peopleIntGainsLatSpace  = zeros(1,0);
 
 for spaceIdx = 1: length(obj.Spaces)
     lightingElecSpace(spaceIdx) = obj.Spaces(spaceIdx).LPD_Wft2 * ...
@@ -66,7 +74,7 @@ lightingElec = sum(lightingElecSpace) .* ...
     daysMonth .* ...
     lgtRatioMonth;  %kWh
 
-lightingIntGainsSens = lightingElec * 3.413;                 %kBtu
+lightingIntGainsSens = lightingElec * 3.412;                 %kBtu
 
 % miscellaneous equipment (plug loads) electric usage and internal gains
 for spaceIdx = 1: length(obj.Spaces)
@@ -77,7 +85,7 @@ for spaceIdx = 1: length(obj.Spaces)
 end   % for loop
 
 EPDelec = sum(EPDelecSpace) .* daysMonth .* lgtRatioMonth;       %kWh
-EPDintGainsSens = EPDelec * 3.413;                              %kBtu
+EPDintGainsSens = EPDelec * 3.412;                              %kBtu
 
 % people internal gains
 for spaceIdx = 1:length(obj.Spaces)

@@ -1,89 +1,71 @@
 function plotActualVModeledMonthlyOilUsage(obj, ax)
 % plotActualVModeledMonthlyOilUsage: Method to plot the actual
 % vs. Modeled monthly usage of Oil for a single year.
-%   This method pulls the Actual (HEA) and Modeled (L2) oil
-%   usage values from the Building's BuildingEnergyUsageTable.
-%   Note: This method takes an input axes; if none exists a
-%   default one is spawned.
-
 arguments
-    % obj: Self-reference to Building object.
     obj (1,1) ece.Building
-
-    % ax: Handle to Axis to plot into.
     ax (:,1) = [];
-
 end %argblock
 
 %% Create Axis if None Supplied
-% If this plot isn't specifically rendered anywhere, create a
-% default figure and axes to parent to.
 if isempty(ax)
-    % Create Figure
     f = figure();
-
-    % Create Axes with Specifications
-    ax = axes("Parent",f,...
-        "NextPlot","add");
-
+    ax = axes("Parent", f, "NextPlot", "add");
 end %endif
 
-%% Extract Data Vectors for Actual and Modeled
-% Acquire total actual Oil usage data from HEA (kWh)
-actualUsage = obj.MonthlyOilProfile.TotalGallons;
+%% Guard: Check Required Data Exists Before Plotting
+% MonthlyOilProfile may not be populated if building has no oil meter.
+% BuildingEnergyUsageTable column may be absent if Level2 hasn't run.
+hasActual  = ~isempty(obj.MonthlyOilProfile) && ...
+    ismember("TotalGallons", obj.MonthlyOilProfile.Properties.VariableNames) && ...
+    any(obj.MonthlyOilProfile.TotalGallons ~= 0);
 
-% Acquire total modeled Oil usage data from Level 2 (gallons)
-%   This table column has all 12 months + annual roll-up, so we
-%   will only extract the first 12 values.
-modeledUsage = obj.BuildingEnergyUsageTable.HeatingOil_gallons(1:12);
+hasModeled = ~isempty(obj.BuildingEnergyUsageTable) && ...
+    ismember("HeatingOil_gallons", obj.BuildingEnergyUsageTable.Properties.VariableNames) && ...
+    any(obj.BuildingEnergyUsageTable.HeatingOil_gallons(1:12) ~= 0);
 
-%% Plot Data
-% Plot vectors to axes across a 12-month domain from January to
-% December.
-%   Note: It is assumed both vectors are already
-%   chronologically ordered.
-% Set up Plot Parameters
+if ~hasActual && ~hasModeled
+    title(ax, "Actual vs. Modelled Monthly Oil Usage");
+    text(0.5, 0.5, "No oil usage data available", ...
+        "HorizontalAlignment", "center", ...
+        "Units", "normalized", ...
+        "Parent", ax);
+    return;
+end %endif
+
+%% Extract Data Vectors
 timeDomain = 1:12;
 markerSize = 12;
 
-% Plot HEA Data
-plotHEA = plot(ax,timeDomain,actualUsage,'k.-',...
-    "MarkerSize",markerSize,...
-    "DisplayName","Actual (HEA)");
+%% Plot Data
+% Only plot whichever series are available.
+if hasActual
+    actualUsage = obj.MonthlyOilProfile.TotalGallons;
+    plot(ax, timeDomain, actualUsage, "k.-", ...
+        "MarkerSize", markerSize, ...
+        "DisplayName", "Actual (HEA)");
+end %endif
 
-% Plot L2 Data
-plotL2 = plot(ax,timeDomain,modeledUsage,'b.-',...
-    "MarkerSize",markerSize,...
-    "DisplayName","Model (Level2)");
+if hasModeled
+    modeledUsage = obj.BuildingEnergyUsageTable.HeatingOil_gallons(1:12);
+    plot(ax, timeDomain, modeledUsage, "b.-", ...
+        "MarkerSize", markerSize, ...
+        "DisplayName", "Model (Level2)");
+end %endif
 
 %% Design Axes
-% Update the Axes layout and formatting to explain the plotted
-% data.
-% -- Axes Labels
-title(ax,"Actual vs. Modelled Monthly Oil Usage");
-xlabel(ax,"Month");
-ylabel(ax,"Usage (Gallons)");
+title(ax, "Actual vs. Modelled Monthly Oil Usage");
+xlabel(ax, "Month");
+ylabel(ax, "Usage (Gallons)");
 
-% -- Axis Style
-grid(ax,"on");
-axis(ax,"tight");
-ylim(ax,[0 inf]);
-% -- TickMark Styling
-% Show a tickmark at every data point (for every month).
-xticks(ax,timeDomain);
+grid(ax, "on");
+axis(ax, "tight");
+ylim(ax, [0 inf]);
 
-% Map the actual month names to the tickmarks in X axis.
-tickLabels = ["January","February","March","April","May",...
-    "June","July","August","September","October","November",...
-    "December"];
-xticklabels(ax,tickLabels);
+xticks(ax, timeDomain);
+xticklabels(ax, ["January","February","March","April","May", ...
+    "June","July","August","September","October","November","December"]);
+xtickangle(ax, 45);
 
-% Angle Tickmarks
-xtickangle(ax,45);
-
-% -- Legend
-% Add legend to delineate which plot is Actual (HEA) vs Modeled
-% (L2).
 legend(ax);
 
 end %function

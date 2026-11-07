@@ -1,4 +1,4 @@
-function calculateWaterDHW(obj)
+    function calculateWaterDHW(obj)
 % Calculate water usage by fixture, monthly and annual totals
 % Calculate water heater input energy and internal gains associated with
 % the DHW system(s)
@@ -32,11 +32,15 @@ end %argblock
 numDHWsystems = height(obj.DHWsystems);
 
 % parameters for the building as a whole, based on primary DHW system
-TcMin = obj.DHWsystems(1).ColdWaterMinTempFeb_F;
-TcMax = obj.DHWsystems(1).ColdWaterMaxTempAug_F;
-TcDelta = TcMax - TcMin;
-Th = obj.DHWsystems(1).HeaterOutputTemp_F;
-ThCommlK = obj.DHWsystems(1).HeaterOutputTempCommlKitchen_F;
+if numDHWsystems > 0
+    TcMin = obj.DHWsystems(1).ColdWaterMinTempFeb_F;
+    TcMax = obj.DHWsystems(1).ColdWaterMaxTempAug_F;
+    TcDelta = TcMax - TcMin;
+    Th = obj.DHWsystems(1).HeaterOutputTemp_F;
+    ThCommlK = obj.DHWsystems(1).HeaterOutputTempCommlKitchen_F;
+else
+    TcMin = 40; TcMax = 70; TcDelta = 30; Th = 120; ThCommlK = 180;
+end
 numUnits = obj.NumberOfUnits;
 numOcc = obj.NumberOfOccupants;
 daysMonth = [31 28 31 30 31 30 31 31 30 31 30 31];
@@ -70,7 +74,7 @@ for n = 1:height(obj.DHWtanks)
   tankQty = tankQty + obj.DHWtanks(n).Quantity;
 end %forloop
 
-mechRmFracCond = sum(loss) / tankQty;
+mechRmFracCond = sum(loss) / max(tankQty, 1);
 
 
 %% Water Usage Annual
@@ -94,7 +98,19 @@ waterCommercialDishwasher = 0;
 waterIrrigation = 0;
 waterCoolingTower = 0;
 waterOther = 0;
-
+wT_Temp = 0;
+wU_Temp = 0;
+wBS_Temp = 0;
+kS_Temp = 0;
+wS_Temp = 0;
+iuD_Temp = 0;
+iuC_Temp = 0;
+cC_Temp = 0;
+cKS_Temp = 0;
+cD_Temp = 0; 
+I_Temp = 0;
+cT_Temp = 0;
+Other_Temp = 0;
 % set up array for fixture usage
 waterUsage = zeros(14,13);
 
@@ -108,70 +124,84 @@ for n=1:height(obj.PlumbingFixtures)
         waterToilets = waterToilets + obj.PlumbingFixtures(n).Gallons * ...
             obj.PlumbingFixtures(n).Uses * numOcc * 365 ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        % Storing the temperatures if applicable to allign with the indices
+        wT_Temp = 0;
     end
     if obj.PlumbingFixtures(n).PlumbingFixtureType == "Urinals"
         waterUrinals = waterUrinals + obj.PlumbingFixtures(n).Gallons * ...
             obj.PlumbingFixtures(n).Uses * numOcc * 365 ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        wU_Temp = 0;
     end
     if obj.PlumbingFixtures(n).PlumbingFixtureType == "BathroomSink"
         waterBsink = waterBsink + obj.PlumbingFixtures(n).Gallons * ...
             obj.PlumbingFixtures(n).Uses * numOcc * 365 ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        wBS_Temp = obj.PlumbingFixtures(n).UseTemp_F;
     end
     if obj.PlumbingFixtures(n).PlumbingFixtureType == "KitchenSink"
         waterKsink = waterKsink + obj.PlumbingFixtures(n).Gallons * ...
             obj.PlumbingFixtures(n).Uses * numOcc * 365 ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        kS_Temp = obj.PlumbingFixtures(n).UseTemp_F;
     end
     if obj.PlumbingFixtures(n).PlumbingFixtureType == "Shower"
         waterShower = waterShower + obj.PlumbingFixtures(n).Gallons * ...
             obj.PlumbingFixtures(n).Uses * numOcc * 365 ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        wS_Temp = obj.PlumbingFixtures(n).UseTemp_F;
     end
     if obj.PlumbingFixtures(n).PlumbingFixtureType == "InUnitDishwasher"
         waterInUnitDishwasher = waterInUnitDishwasher + ...
             obj.PlumbingFixtures(n).Gallons * ...
             obj.PlumbingFixtures(n).Uses * numUnits * 52 ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        iuD_Temp = obj.PlumbingFixtures(n).UseTemp_F;
     end
     if obj.PlumbingFixtures(n).PlumbingFixtureType == "InUnitClotheswasher"
         waterInUnitClotheswasher = waterInUnitClotheswasher + ...
             obj.PlumbingFixtures(n).Gallons * ...
             obj.PlumbingFixtures(n).Uses * numUnits * 52 ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        iuC_Temp = obj.PlumbingFixtures(n).UseTemp_F;
     end
     if obj.PlumbingFixtures(n).PlumbingFixtureType == "CommonClotheswasher"
         waterCommonClotheswasher = waterCommonClotheswasher + ...
             obj.PlumbingFixtures(n).Gallons * ...
             obj.PlumbingFixtures(n).Uses * numUnits * 52 ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        cC_Temp = obj.PlumbingFixtures(n).UseTemp_F;
     end
     if obj.PlumbingFixtures(n).PlumbingFixtureType == "CommercialKitchenSink"
         waterCommercialKitchenSink = waterCommercialKitchenSink + ...
             obj.PlumbingFixtures(n).Gallons * ...
             obj.PlumbingFixtures(n).Uses * numOcc * 365 ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        cKS_Temp = obj.PlumbingFixtures(n).UseTemp_F;
     end
     if obj.PlumbingFixtures(n).PlumbingFixtureType == "CommercialDishwasher"
         waterCommercialDishwasher = waterCommercialDishwasher + ...
             obj.PlumbingFixtures(n).Gallons * ...
             obj.PlumbingFixtures(n).Uses * numUnits * 52 ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        cD_Temp = obj.PlumbingFixtures(n).UseTemp_F;
     end
     if obj.PlumbingFixtures(n).PlumbingFixtureType == "Irrigation"
         waterIrrigation = waterIrrigation + ...
             obj.PlumbingFixtures(n).Gallons ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        I_Temp = 0;
     end
     if obj.PlumbingFixtures(n).PlumbingFixtureType == "CoolingTower"
         waterCoolingTower = waterCoolingTower + ...
             obj.PlumbingFixtures(n).Gallons ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        cT_Temp = 0;
     end
     if obj.PlumbingFixtures(n).PlumbingFixtureType == "Other"
         waterOther = waterOther + obj.PlumbingFixtures(n).Gallons ...
             * obj.PlumbingFixtures(n).FractionTotal;
+        Other_Temp = obj.PlumbingFixtures(n).UseTemp_F;
     end
 
 end  % for loop    
@@ -180,6 +210,8 @@ waterUsage(1:13,13) = [waterToilets, waterUrinals, waterBsink, waterKsink, water
     waterInUnitDishwasher, waterInUnitClotheswasher, waterCommonClotheswasher, ...
     waterCommercialKitchenSink, waterCommercialDishwasher, waterIrrigation, ...
     waterCoolingTower, waterOther]';
+Tuse = [wT_Temp, wU_Temp, wBS_Temp, kS_Temp, wS_Temp, iuD_Temp, iuC_Temp,...
+       cC_Temp, cKS_Temp, cD_Temp, I_Temp, cT_Temp, Other_Temp]';
 
 
 %% Water Monthly Usage Array and Table
@@ -211,29 +243,52 @@ water12Tbl = addvars(water12Tbl, waterGallons, 'Before', 'Jan');
 % efficiency and fraction of load served
 
 %calculate monthly and annual energy use to heat DHW
+if numDHWsystems == 0
+    monthCols = {'Jan','Feb','Mar','Apr','May','Jun','Jul', ...
+                 'Aug','Sep','Oct','Nov','Dec','Annual'};
+    DHWenergy_kBtu = ["Bathroom Sink";"Kitchen Sink";"Shower"; ...
+        "InUnit Dishwasher";"InUnit Clotheswasher"; ...
+        "Common Area Clotheswasher";"Commercial Kitchen Sink"; ...
+        "Commercial Dishwasher";"Mechanical room pipe/tank losses"; ...
+        "Circulation losses";"Total load";"DHW heater input"; ...
+        "Internal gains DHW"];
+    obj.DHWenergyUsageTable = [table(DHWenergy_kBtu, ...
+        'VariableNames',{'DHWenergy_kBtu'}), ...
+        array2table(zeros(13,13),'VariableNames',monthCols)];
+    DHWfuelType = ["Electricity_kWh";"Gas_therms";"HeatingOil_gallons"; ...
+                   "Propane_gallons";"TotalEnergy_kBtu"];
+    obj.DHWfuelTable = [table(DHWfuelType,'VariableNames',{'DHWfuelType'}), ...
+        array2table(zeros(5,13),'VariableNames',monthCols)];
+    obj.DHWcontrolsTable = array2table(zeros(1,13), ...
+        'VariableNames',monthCols,'RowNames',{'DHWcontrols_kWh'});
+    obj.WaterUsageTable = water12Tbl;
+    return;
+end
 
 %cold water (mains) temperature each month
 TcMonth = TcMin + ((TcDelta/2) * (1+cos(((1:12)+5)*(pi/6))));
 
-%temp at point of use for 8 fixture types that use hot water
-for n = 1:8
-    Tuse(n) = obj.PlumbingFixtures(n+2).UseTemp_F;
-end     % for loop
+num_PF = length(Tuse);
+% %temp at point of use for 8 fixture types that use hot water
+% for n = 1:num_PF
+%     Tuse(n) = obj.PlumbingFixtures(n).UseTemp_F;
+% end     % for loop
 
-Tuse = Tuse';
+%Tuse = Tuse'
 
 %temp of hot water from the DHW heater. same for each fixture type except
 %for commercial kitchen
-ThVector = ones(8,1)*Th;
+ThVector = ones(9,1)*Th;
 ThVector(8) = ThCommlK;
 
 %fraction of water heated for each fixture type for each month
 %(Tuse - TcMonth) is an 8 row 12 column array. for all 8 hot water using
 % fixtures over 12 months. (ThVector -TcMonth) is also 8 row 12 column array
-fracHot = (Tuse - TcMonth) ./ (ThVector - TcMonth);
+fracHot = abs((Tuse([3:10, 13],:) - TcMonth) ./ (ThVector - TcMonth));
+
 
 %water heated for each hot using fixture type for each month, gallons
-galHeated = fracHot .* waterUsage(3:10, 1:12);
+galHeated = fracHot .* waterUsage([3:10, 13], 1:12);
 
 %total amount of water heated that is used for the year for all fixtures
 galHeatedTotalAnnual = sum(galHeated, 'all');
@@ -282,7 +337,7 @@ totalDHWtankLoss = sum(DHWtankLoss);
 
 % DHW pipes in mechanical room heat loss, kBtu
 numDHWpipes = height(obj.DHWpipesMechRoom);
-DHWpipeLoss = zeros(1,numDHWtanks);
+DHWpipeLoss = zeros(1,numDHWpipes);
 
 for n = 1:numDHWpipes
     if obj.DHWpipesMechRoom(n).PipeType == 'CopperBare'
@@ -422,7 +477,7 @@ for n = 1:numDHWsystems
     
     else 
         DHWInput12_kWh(n, :) = DHWheaterInputEnergy12(n, :) * 1000 ...
-            / 3413;    % kWh electricity
+            / 3412;    % kWh electricity
     end   % if statement
 
 end  % for loop
@@ -475,8 +530,8 @@ DHWtankControls12_kWh(n, :) = obj.DHWtanks(n).ControlskW * 8760/12 * ones(1,12);
 end   % for loop
 
 % all the DHW controls combined for each month, heaters and tanks
-allDHWheaterControls12_kWh = sum(DHWheaterControls12_kWh);
-allDHWtankControls12_kWh = sum(DHWtankControls12_kWh);
+allDHWheaterControls12_kWh = sum(DHWheaterControls12_kWh,1);
+allDHWtankControls12_kWh = sum(DHWtankControls12_kWh,1);
 allDHWControls12_kWh = allDHWheaterControls12_kWh + allDHWtankControls12_kWh;
 % total annual electricity for DHW controls
 allDHWControlsAnnual_kWh = sum(allDHWControls12_kWh);
@@ -506,13 +561,13 @@ for n = 1:numDHWsystems
     DHWintGainsCircLoss12(n, :) = circLoss12(n, :) * obj.DHWsystems(n).CircLossesFracCond;
 end   % for loop
 % internal gains circulation losses for all DHW systems
-allDHWintGainsCircLoss12 = sum(DHWintGainsCircLoss12(:));
+allDHWintGainsCircLoss12 = sum(DHWintGainsCircLoss12, 1);
 
 % Internal gains from DHW controls (very minor). kBtu
-DHWintGainsControls12 = allDHWControls12_kWh * 3413/1000 * mechRmFracCond;
+DHWintGainsControls12 = allDHWControls12_kWh * 3412/1000 * mechRmFracCond;
 % monthly internal gains for the DHW in the whole building
 allDHWintGains12 = DHWintGainsMechRoom12 + allDHWintGainsCircLoss12 + ...
-    DHWintGainsControls12; 
+    DHWintGainsControls12 ;
 
 %% Make a table showing all DHW energy flows by month and annual
 
@@ -520,7 +575,7 @@ allDHWintGains12 = DHWintGainsMechRoom12 + allDHWintGainsCircLoss12 + ...
 
 DHWenergy_kBtu = ["Bathroom Sink"; "Kitchen Sink"; "Shower";...
     "InUnit Dishwasher"; "InUnit Clotheswasher"; "Common Area Clotheswasher"; ...
-    "Commercial Kitchen Sink"; "Commercial Dishwasher"; ...
+    "Commercial Kitchen Sink"; "Commercial Dishwasher"; "Other"; ...
     "Mechanical room pipe/tank losses"; "Circulation losses"; ...
     "Total load"; "DHW heater input"; "Internal gains DHW"];
 

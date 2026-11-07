@@ -212,6 +212,14 @@ for meterIdx = 1:numMeters
 
     % Convert years to average to number of days (sloppily, no leap years)
     numDaysToAvg = numYearsToAvg * 365;
+    if numDaysToAvg > height(ddTable)
+        error("ece:insufficientHistoricalDD", ...
+            "Historical degree-day table has %d rows, shorter than the " + ...
+            "requested %d-year averaging window (%d days). " + ...
+            "Reduce Site.NumPastYearsToAverage, or supply more years " + ...
+            "of degree-day data via Location.importHistoricalDDTable.", ...
+            height(ddTable), numYearsToAvg, numDaysToAvg);
+    end
     lastXYearsIndices = (height(ddTable)+1 - numDaysToAvg) : height(ddTable);
 
     % Obtain month values for the last x years in the dd table.
@@ -220,15 +228,17 @@ for meterIdx = 1:numMeters
     % Create heating mask for DD table.
     heatingMask = ismember(month(ddTable.Date), heatingMonths);
 
-    % Apply heating mask to zero out the corresponding HDDD values in DD table.
-    ddTable.HDD65(~heatingMask) = 0;
+    % Apply heating mask on a local copy of HDD, so per-meter mutation
+    % doesn't bleed into the next iteration of the meter loop.
+    hdd = ddTable.HDD65;
+    hdd(~heatingMask) = 0;
 
     % Pull out Last X HDD/CDD for Correct Months
     %   The below line basically pulls the last 5 years of the corresponding
     %   column by index, but only those indexes that are marked acceptable by
     %   the corresponding mask, resulting in the last 5 years of results that
     %   fall in the appropriate months.
-    avgHDD = ddTable.HDD65(lastXYearsIndices);
+    avgHDD = hdd(lastXYearsIndices);
 
     % Compute Single-Year Average by dividing by number of years
     avgHDD = sum(avgHDD) / numYearsToAvg;
@@ -242,8 +252,11 @@ for meterIdx = 1:numMeters
     % Note, if there are any NaN's in the monthly table for space heat, the
     % sum of that column will be NaN, oilHeatAdj will be NaN, and calc will
     % fail.
-    oilHeatAdj = normAnnualHeating / sum(monthlyProfile(:, 3));
-    monthlyProfile(:, 3) = oilHeatAdj * monthlyProfile(:, 3);
+    heatColSum = sum(monthlyProfile(:, 3));
+    if heatColSum > 0
+        oilHeatAdj = normAnnualHeating / heatColSum;
+        monthlyProfile(:, 3) = oilHeatAdj * monthlyProfile(:, 3);
+    end
 
     % Get Total Normalized Gas Usage
     % Add up StoveDryer, DHWTherm, and SpaceHeat.

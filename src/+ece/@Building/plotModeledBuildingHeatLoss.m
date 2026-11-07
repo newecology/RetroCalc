@@ -1,106 +1,77 @@
 function plotModeledBuildingHeatLoss(obj, ax)
-% plotModeledBuildingHeatLoss: Method to plot the
-% accumulated contributions of Components to HeatLoss of the Building.
-%   This method pulls the components from the Building that have a
-%   contribution to the monthly HeatLoss.
-%   Note: This method takes an input axes; if none exists a
-%   default one is spawned.
-
+% plotModeledBuildingHeatLoss: Method to plot the accumulated contributions
+% of Components to HeatLoss of the Building.
+% Only components with nonzero heat loss contributions are plotted,
+% making the function robust to buildings that lack skylights, slabs, etc.
 arguments
-    % obj: Self-reference to Building object.
     obj (1,1) ece.Building
-
-    % ax: Handle to Axis to plot into.
     ax (:,1) = [];
-
 end %argblock
 
 %% Create Axis if None Supplied
-% If this plot isn't specifically rendered anywhere, create a
-% default figure and axes to parent to.
 if isempty(ax)
-    % Create Figure
     f = figure();
-
-    % Create Axes with Specifications
-    ax = axes("Parent",f,...
-        "NextPlot","add");
-
+    ax = axes("Parent", f, "NextPlot", "add");
 end %endif
 
-%% Extract Data Vectors for Each Modeled Component
-% The components that contribute to the HeatLoss are as follows:
-%  1) Wall
-%  2) Roof
-%  3) Door
-%  4) Window
-%  5) Skylight
-%  6) Slabs
-%  7) Ventilation-Infiltration
-%  8) BelowGradeSurfaces
+%% Define All Possible Components and Labels
+% Order here controls stacking order in bar chart.
+componentNames = ["Wall", "Roof", "Door", "Window", "Skylight", ...
+    "Slabs", "Ventilation-Infiltration", "BelowGradeSurfaces"];
+displayLabels = ["Wall", "Roof", "Door", "Window", "Skylight", ...
+    "Slabs", "Vent/Infil", "Below Grade Surfaces"];
 
-% These values are pulled from various places in the Building.
-wallHL = obj.HeatLossComponentsTable.Wall;
-roofHL = obj.HeatLossComponentsTable.Roof;
-doorHL = obj.HeatLossComponentsTable.Door;
-windowHL = obj.HeatLossComponentsTable.Window;
-skylightHL = obj.HeatLossComponentsTable.Skylight;
-slabsHL = obj.HeatLossComponentsTable.Slabs;
-ventInfHL = obj.HeatLossComponentsTable.("Ventilation-Infiltration");
-bgsHL = obj.HeatLossComponentsTable.BelowGradeSurfaces;
+%% Extract and Filter Components
+% Build matrix and label list dynamically — skip any component
+% whose annual total is zero (not present in this building).
+heatLossMatrix = [];
+activeLabels   = string.empty;
 
-% Combine into single heatloss matrix.
-heatLossMatrix = [...
-    wallHL,...
-    roofHL,...
-    doorHL,...
-    windowHL,...
-    skylightHL,...
-    slabsHL,...
-    ventInfHL,...
-    bgsHL];
+for i = 1:numel(componentNames)
+    colName = componentNames(i);
+
+    % Guard: check column exists in table before accessing
+    if ~ismember(colName, obj.HeatLossComponentsTable.Properties.VariableNames)
+        continue;
+    end %endif
+
+    colData = obj.HeatLossComponentsTable.(colName);
+
+    % Only include if component has nonzero contribution
+    if any(colData ~= 0)
+        heatLossMatrix = [heatLossMatrix, colData]; %#ok<AGROW>
+        activeLabels(end+1) = displayLabels(i);     %#ok<AGROW>
+    end %endif
+
+end %for
+
+%% Guard Against Empty Matrix
+if isempty(heatLossMatrix)
+    title(ax, "Modeled Component Contributions to Building Heat Loss");
+    text(0.5, 0.5, "No heat loss data available", ...
+        "HorizontalAlignment", "center", ...
+        "Units", "normalized", ...
+        "Parent", ax);
+    return;
+end %endif
 
 %% Plot Data
-% Plot vectors to axes across a 12-month domain from January to
-% December.
-%   Note: It is assumed both vectors are already
-%   chronologically ordered.
-% Set up Plot Parameters
 timeDomain = 1:12;
-
-% Plot HeatLoss as StackedBar
-plotHeatLoss = bar(ax,timeDomain,...
-    heatLossMatrix,"stacked");
+bar(ax, timeDomain, heatLossMatrix, "stacked");
 
 %% Design Axes
-% Update the Axes layout and formatting to explain the plotted
-% data.
-% -- Axes Labels
-title(ax,"Modeled Component Contributions to Building Heat Loss");
-xlabel(ax,"Month");
-ylabel(ax,"Heat Loss");
+title(ax, "Modeled Component Contributions to Building Heat Loss");
+xlabel(ax, "Month");
+ylabel(ax, "Heat Loss (BTU/hr·°F)");
 
-% -- Axis Style
-grid(ax,"on");
-axis(ax,"tight");
+grid(ax, "on");
+axis(ax, "tight");
 
-% -- TickMark Styling
-% Show a tickmark at every data point (for every month).
-xticks(ax,timeDomain);
+xticks(ax, timeDomain);
+xticklabels(ax, ["January","February","March","April","May", ...
+    "June","July","August","September","October","November","December"]);
+xtickangle(ax, 45);
 
-% Map the actual month names to the tickmarks in X axis.
-tickLabels = ["January","February","March","April","May",...
-    "June","July","August","September","October","November",...
-    "December"];
-xticklabels(ax,tickLabels);
-
-% Angle Tickmarks
-xtickangle(ax,45);
-
-% -- Legend
-% Add legend to delineate which bar in the stack is which component.
-legend(ax,...
-    ["Wall","Roof","Door","Window","Skylight",...
-    "Slabsl","Vent/Infil","Below Grade Surfaces"]);
+legend(ax, activeLabels);
 
 end %function

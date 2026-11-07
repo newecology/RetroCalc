@@ -35,10 +35,10 @@ end %endif
 
 %% Read Data from Sheet in Excel File
 % Extract Table and remove empty rows.
-ecmTbl  = readtable(fileName,"Sheet",sheetName);
+ecmTbl  = readtable(fileName,"Sheet",sheetName,"TextType","string");
 %ecmTbl  = rmmissing(ecmTbl,'MinNumMissing', 19);
 
-% Call the ReadSourceFromTable function
-ecm = ReadSourceFromTable(ecmTbl,sheetName);
+% Call readSourceFromTable (lowercase — fixes Linux/macOS case sensitivity)
+ecm = ece.ECM.readSourceFromTable(ecmTbl,sheetName);
 
 end %function

@@ -47,7 +47,7 @@ classdef BelowGradeSurface < handle & matlab.mixin.Copyable
         % Should be inherited/derived from Site.
 
         % Soil thermal conductivity in Btu/hr-ft-°F
-        SoilThermalConductivity (1,1) double = 0;
+        SoilThermalConductivity (1,1) double = 0.8;
         % move to site class
 
         %Phase constant for time lag in days for the location
@@ -111,7 +111,7 @@ classdef BelowGradeSurface < handle & matlab.mixin.Copyable
 
         % FromSourceData - Method to generate a BelowGradeSurface object from a set
         % of input data that defines properties.
-        %fileName = "C:\Users\HenryHarvey\Desktop\Projects\MATLAB\Nov2023\L2calcs\calcInputs8";
+        
         %belowGradeSurfacesTbl = ReadBelowGradeSurfacesDataFromExcel(fileName);
         belowGradeSurfacesTbl = readSourceData(fileName);
 

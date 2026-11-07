@@ -9,10 +9,18 @@ classdef Solar <handle
         % scopes.
 
         % QueryURL - Site URL to obtain Solar data from.
-        QueryURL (1,1) string = "https://developer.nrel.gov/api/pvwatts/v8.json?";
+        QueryURL (1,1) string = "https://developer.nlr.gov/api/pvwatts/v8.json";
 
-        % APIkey - API key for Solar Data
-        APIkey (1,1) string = "P0sSoorvBg09LdLScLrud4fkoSG4c9JWVVR2ykZI";
+        % APIkey - Fallback API key for Solar Data. Empty by default so
+        % that a missing NREL_API_KEY env var fails visibly (via HTTP 403
+        % from webread, surfaced by getSolarData.m's fallback chain)
+        % instead of silently reusing a shared committed key.
+        %
+        % DO NOT paste real keys here. Set the key per-machine via the
+        % NREL_API_KEY environment variable, or per-deploy via the
+        % endpoint override config (see util.getEndpointOverride and
+        % Architecture Notes in REVIEW_NOTES.md).
+        APIkey (1,1) string = "";
 
         % DatasetType - Type of dataset to return from Solar API
         DatasetType (1,1) string = "nsrdb";
@@ -41,7 +49,7 @@ classdef Solar <handle
         % GetSolarData - Static method to pass in azimuth, tilt, and
         % address location data to get the corresponding pvWattsData
         % structure about the Solar results for that position and location.
-        pvWattsData = getSolarData(azimuth, tilt, latitude, longitude);
+        [pvWattsData, statusOK, msg] = getSolarData(azimuth, tilt, latitude, longitude);
 
 
 

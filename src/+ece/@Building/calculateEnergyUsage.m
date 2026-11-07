@@ -10,7 +10,11 @@ function calculateEnergyUsage(obj)
 % annual roll-up of all months.
 
 % Updating the ElectricUsageTable with space cooling and space heating
-obj.ElectricUsageTable.SpaceCooling = obj.SpaceCoolingTable_kWh{end,4:16}';
+if isempty(obj.SpaceCoolingTable_kWh)
+    obj.ElectricUsageTable.SpaceCooling = zeros(13, 1);
+else
+      obj.ElectricUsageTable.SpaceCooling = obj.SpaceCoolingTable_kWh{end, 4:16}';
+end
 obj.ElectricUsageTable.SpaceHeating = obj.HeatFuelTable.Electricity_kWh;
 
 % Update the totals column to include the space heat/cool kWh.
@@ -52,7 +56,7 @@ energy12(1:12,2:4) = [...
     heatOil12_gallons + DHWoil12_gallons,...
     heatPropane12_gallons + DHWpropane12_gallons + applPropane12_gallons];
 
-energy12(:,end) = energy12(:,1) * 3413/1000 + ...
+energy12(:,end) = energy12(:,1) * 3412/1000 + ...
     energy12(:,2) * 100 + ...
     energy12(:,3) * 138500/1000 + ...
     energy12(:,4) * 91500/1000;
@@ -135,8 +139,12 @@ obj.Level2.Electricity_kWh = ...
 obj.Level2.Gas_therms = ...
     obj.BuildingEnergyUsageTable.Gas_therms(end);
 % Water Usage
-obj.Level2.Water_gallons = ...
-    obj.WaterUsageTable.Annual(obj.WaterUsageTable.waterGallons == "Totals");
+if any(obj.WaterUsageTable.waterGallons == "Totals")
+  obj.Level2.Water_gallons = ...
+      obj.WaterUsageTable.Annual(obj.WaterUsageTable.waterGallons == "Totals");
+else
+  obj.Level2.Water_gallons = 0;
+end
 % Oil Usage
 obj.Level2.Oil_gallons = ...
     obj.BuildingEnergyUsageTable.HeatingOil_gallons(end);
@@ -161,7 +169,7 @@ obj.Level2.AnnualCostOfWater = obj.Level2.Water_gallons * ...
 obj.Level2.UnitCostOfWater = obj.HEA.UnitCostOfWater;
 
 obj.Level2.AnnualCostOfOil = obj.Level2.Oil_gallons * ...
-    obj.HEA.UnitCostOfOil
+    obj.HEA.UnitCostOfOil;
 obj.Level2.UnitCostOfOil = obj.HEA.UnitCostOfOil; 
 
 obj.Level2.AnnualCostOfPropane = obj.Level2.Propane_gallons * ...
@@ -204,7 +212,11 @@ obj.Level2.SpaceHeat_kWh = obj.HeatFuelTable.Electricity_kWh(end);
 
 obj.Level2.SpaceHeatGas_therms = obj.HeatFuelTable.Gas_therms(end);
 
-obj.Level2.SpaceHeatOil_kBtu = obj.HeatFuelTable.HeatingOil_gallons(end);
+% Convert gallons back to kBtu using the 139 kBtu/gal constant that
+% calculateSpaceHeatingEnergy.m used to build the HeatFuelTable's
+% TotalEnergy_kBtu column (line 418). Keeping the two paths consistent;
+% HEA uses a per-meter OilType-aware conversion via Reference.OilTypekBtuTable.
+obj.Level2.SpaceHeatOil_kBtu = obj.HeatFuelTable.HeatingOil_gallons(end) * 139;
 
 obj.Level2.SpaceHeatPropane_gallons = obj.HeatFuelTable.Propane_gallons(end);
 
@@ -214,7 +226,7 @@ obj.Level2.SpaceHeat_kBtuFt2 = obj.HeatFuelTable.TotalEnergy_kBtu(end) ...
 % Space cooling energy in kWh and in kBtu/ft2.
 obj.Level2.SpaceCool_kWh = obj.ElectricUsageTable.SpaceCooling(end);
 
-obj.Level2.SpaceCool_kBtuFt2 = obj.Level2.SpaceCool_kWh * 3413 / 1000 / area;
+obj.Level2.SpaceCool_kBtuFt2 = obj.Level2.SpaceCool_kWh * 3412 / 1000 / area;
 
 % DHW energy for each utility in kWh, therms, gallons of oil, propane,
 % and for all utilities combined in kBtu/ft2.
@@ -224,8 +236,11 @@ obj.Level2.DHW_kWh = obj.DHWfuelTable.Annual(obj.DHWfuelTable.DHWfuelType == ...
 obj.Level2.DHWGas_therms = obj.DHWfuelTable.Annual(obj.DHWfuelTable.DHWfuelType == ...
     "Gas_therms");
 
+% DHWfuelTable's "HeatingOil_gallons" row is gallons (calculateWaterDHW.m
+% divides by 139000 Btu/gal). Convert back to kBtu with the same 139 kBtu/gal
+% constant, parallel to the D7 fix for SpaceHeatOil_kBtu above.
 obj.Level2.DHWOil_kBtu = obj.DHWfuelTable.Annual(obj.DHWfuelTable.DHWfuelType == ...
-    "HeatingOil_gallons");
+    "HeatingOil_gallons") * 139;
 
 obj.Level2.DHWPropane_gallons = obj.DHWfuelTable.Annual(obj.DHWfuelTable.DHWfuelType == ...
     "Propane_gallons");
@@ -240,8 +255,8 @@ HVAC_kWh = obj.ElectricUsageTable.DHW(end) + ...
     obj.ElectricUsageTable.SpaceCooling(end);
 obj.Level2.NonHVACelec_kBtuFt2 = ...
     (obj.ElectricUsageTable.MonthlyTotals(end) - HVAC_kWh) ...
-    * 3413 / 1000 / area;
-
+    * 3412 / 1000 / area;
+obj.Level2.NonHVACelec_kWh = obj.ElectricUsageTable.MonthlyTotals(end) - HVAC_kWh;
 % Gas or propane use for appliances, kBtu (excludes electricity)
 % Need to add propane use to level 2 cooking/drying calculation.
 obj.Level2.ApplianceFuel_kBtuFt2 = obj.ApplianceResultsTable.gasUse_therms...

@@ -1,7 +1,14 @@
-function applyMeasure(obj,bldg)
+function applyMeasure(obj,bldg,snapshotTargets)
 %APPLYMEASURE Method to apply a Measure onto an input Building.
 %  The MC in question is applied to the Building based on the kind of MC it
 %  is (add/delete/change) and the properties of the Building.
+%
+%  snapshotTargets (optional): array of object handles that were resolved
+%  from an Object#-based FilterCriteria at ECM entry, before earlier MCs
+%  shifted the target collection. When provided, Edit/Delete operate on
+%  these handles rather than re-parsing FilterCriteria. Callers other than
+%  ECM.applyECM should omit this argument; the existing FilterCriteria
+%  parse path is preserved when it is empty.
 
 %% Arguments Block
 % Ensure inputs are the correct size and type.
@@ -11,6 +18,9 @@ arguments
 
     % building: Building object that MeasureComponent is applied to.
     bldg (1,1) ece.Building
+
+    % snapshotTargets: Optional pre-resolved handles from ECM-entry snapshot.
+    snapshotTargets = []
 
 end %argblock
 
@@ -36,8 +46,14 @@ end %endif
 % requested (insert/edit/delete) and then calling the correct code to apply
 % that change to the impacted Objects retrieved earlier.
 
-% Determine operation by switch/case
-switch lower(obj.Operation)
+% Determine operation by switch/case. Accept "update" as a synonym for
+% "edit" so MCs created by the Excel ECM import path (which writes
+% "update" into Operation) dispatch correctly — the UI path writes "Edit".
+op = lower(string(obj.Operation));
+if op == "update"
+    op = "edit";
+end
+switch op
     case "insert"
         % -- Insert
         % Insert Operation adds a new object of the specified type to the
@@ -52,20 +68,79 @@ switch lower(obj.Operation)
         % -- Edit
         % Edit Operation modifies properties of objects of the specified
         % type in Building that fall under a specific filter criteria.
-        idx = parseToGetIndex(impctObj,obj.FilterCriteria);
+        % If ECM.applyECM pre-resolved this MC's Object# criterion to
+        % actual handles, resolve those handles to current positions in
+        % the (possibly-shifted) live array; otherwise re-parse
+        % FilterCriteria against the current live state.
+        if ~isempty(snapshotTargets)
+            idx = [];
+            for h = 1:numel(snapshotTargets)
+                pos = find(arrayfun( ...
+                    @(x) x == snapshotTargets(h), impctObj));
+                idx = [idx; pos(:)]; %#ok<AGROW>
+            end
+        else
+            idx = parseToGetIndex(impctObj,obj.FilterCriteria);
+        end
+        % Parse PropertyToChange for an indexed form "Name(k)" or an
+        % annotated form "Name(k) — Label". The regex anchors at string
+        % start and matches a bare identifier followed by (digits); any
+        % trailing " — label" from the dropdown display is ignored.
+        idxTok = regexp(obj.PropertyToChange, '^(\w+)\((\d+)\)', 'tokens', 'once');
+        if ~isempty(idxTok)
+            basePropName  = string(idxTok{1});
+            targetElemIdx = str2double(idxTok{2});
+        else
+            basePropName  = obj.PropertyToChange;
+            targetElemIdx = [];
+        end
+
         for k = 1 : numel(idx)
             thdx = idx(k);
-            cval = impctObj(thdx).(obj.PropertyToChange);
-            calcVal = applyOperation(cval,obj.UpdateType,obj.ValueForChange);
-            impctObj(thdx).(obj.PropertyToChange) = calcVal;
+            if isempty(targetElemIdx)
+                % Whole-property path (unchanged behavior).
+                cval = impctObj(thdx).(basePropName);
+                calcVal = applyOperation(cval,obj.UpdateType,obj.ValueForChange);
+                try
+                    impctObj(thdx).(basePropName) = calcVal;
+                catch
+                    % Direct assignment failed — likely an enum property receiving a string.
+                    targetClass = class(impctObj(thdx).(basePropName));
+                    impctObj(thdx).(basePropName) = feval(targetClass, string(calcVal));
+                end
+            else
+                % Indexed-element path: mutate a single slot of the array
+                % property, leaving the other elements untouched.
+                arrVal = impctObj(thdx).(basePropName);
+                cval = arrVal(targetElemIdx);
+                calcVal = applyOperation(cval,obj.UpdateType,obj.ValueForChange);
+                arrVal(targetElemIdx) = calcVal;
+                impctObj(thdx).(basePropName) = arrVal;
+            end
         end %forloop
 
     case "delete"
-        % -- Delete
-        % Delete Operation removes objects of the specified type from the
-        % Building, that fall under a specific filter criteria.
-        idx = parseToGetIndex(impctObj,obj.FilterCriteria);
-        impctObj(idx) = [];
+      % -- Delete
+      % If ECM.applyECM pre-resolved this MC's Object# criterion to actual
+      % handles, use those (snapshot semantics — matches what the user
+      % labelled in the UI against the pristine collection).
+      if ~isempty(snapshotTargets)
+          keepMask = true(numel(impctObj),1);
+          for h = 1:numel(snapshotTargets)
+              keepMask = keepMask & arrayfun( ...
+                  @(x) x ~= snapshotTargets(h), impctObj);
+          end
+          impctObj = impctObj(keepMask);
+      else
+          if ismissing(obj.FilterCriteria) || strlength(obj.FilterCriteria) == 0
+              warning("applyMeasure:emptyDeleteFilter", ...
+                  "MeasureComponent has Operation=Delete but empty FilterCriteria; skipping to avoid wiping entire %s collection.", ...
+                  obj.ObjectVarName);
+              return
+          end
+          idx = parseToGetIndex(impctObj, obj.FilterCriteria);
+          impctObj(idx) = [];
+      end
 
 end %switch/case
 
@@ -119,8 +194,24 @@ evalStrings = "cObj." + string(matches);
 
 % Iteratively run each eval string.
 for evalStrIdx = 1 : numel(evalStrings)
-    % Extract eval string and evaluate it.
-    eval(evalStrings(evalStrIdx))
+    try
+        eval(evalStrings(evalStrIdx))
+    catch
+        % Eval failed — likely assigning a string to an enum property.
+        % Parse property name and value, then convert to target type.
+        tok = regexp(evalStrings(evalStrIdx), 'cObj\.(\w+)\s*=\s*"([^"]*)"', 'tokens');
+        if ~isempty(tok)
+            propName = tok{1}{1};
+            propVal  = tok{1}{2};
+            targetClass = class(cObj.(propName));
+            try
+                cObj.(propName) = feval(targetClass, propVal);
+            catch ME2
+                warning('applyMeasure: could not set %s to "%s": %s', ...
+                    propName, propVal, ME2.message);
+            end
+        end
+    end
 end %forloop
 
 end %function
@@ -162,8 +253,11 @@ if filterExists
         % Convert index string to numbers, and then sort for posterity.
         indicNums = str2double(indiceStrings);
 
-        % Clip between valid array indices.
-        indicNums = clip(indicNums,1,numObjs);
+        % Filter out-of-range indices rather than clipping them —
+        % clip(5,1,3)=3 silently mapped e.g. "Object#: 5" on a 3-element
+        % collection to element 3. Now out-of-range indices are skipped,
+        % consistent with the snapshot path in ECM.applyECM.
+        indicNums = indicNums(indicNums >= 1 & indicNums <= numObjs);
 
         % Set Idx values at nums to true;
         idx(indicNums) = true;
@@ -206,8 +300,15 @@ function calcVal = applyOperation(cval,opr,oVal)
 % APPLYOPERATION: Applies operation (add/multiply/replace) for updating
 % property of an object.
 
-% Get Value by OperationType
-switch lower(opr)
+% Get Value by OperationType. Accept "replace" as a synonym for "direct"
+% so Excel-sourced ECMs (which use the user-friendly label "replace")
+% dispatch the same as UI-sourced ones (which store "direct").
+opLc = lower(string(opr));
+if opLc == "replace"
+    opLc = "direct";
+end
+
+switch opLc
     case "multiply"
         % -- Multiply
         % Return current value multiplied by operation value.
@@ -221,12 +322,13 @@ switch lower(opr)
     case "direct"
         % -- Direct
         % Return operation value directly.
-        calcVal = oVal;    
-    
+        calcVal = oVal;
+
     otherwise
         % -- Unsupported
         % Throw error for unsupported operation type.
-        error("Unsupported operation type.");
+        error("applyMeasure:UnsupportedUpdateType", ...
+            "Unsupported UpdateType '%s'. Must be one of: add, multiply, direct, replace.", opr);
 
 end %switch/case
 

@@ -1,183 +1,288 @@
 # RetroCalc
 
-> A scalable, ASHRAE Level 2-compliant, energy, water, and decarbonization modeling software focused on retrofitting large multifamily buildings.
+> **An ASHRAE Level 2-compliant energy, water, and decarbonization model for multifamily buildings.**
+> Built by [New Ecology, Inc.](https://newecology.org) to make rigorous retrofit analysis fast enough for real-world technical assistance.
 
-## Background
+![MATLAB](https://img.shields.io/badge/MATLAB-R2022b%2B-blue)
+![License](https://img.shields.io/badge/license-see%20LICENSE.txt-lightgrey)
+![ASHRAE](https://img.shields.io/badge/ASHRAE-Level%202-brightgreen)
 
-RetroCalc, developed by New Ecology Inc. (NEI), is an innovative energy modeling tool designed specifically for decarbonizing multifamily buildings at scale. Drawing on NEI’s 25 years of experience in multifamily retrofits, RetroCalc combines detailed energy and water modeling with an intuitive, user- friendly functionality. This tool provides technical assistance (TA) providers with the rigorous energy and cost analysis needed to achieve successful decarbonization, without the time and complexity typically required by traditional modeling software.
+This is the **open-source backend** of RetroCalc. There is also a desktop UI build distributed separately; this repo is the engine — everything the UI does is reachable from the MATLAB command line via a small number of well-documented classes and helpers.
 
-By integrating energy and water analysis and calibrating projections to real-world utility data, RetroCalc enables building owners, TA providers, and stakeholders to make informed decisions on retrofit strategies. It ensures accurate, cost-effective planning that boosts energy efficiency, reduces carbon emissions, and improves occupant comfort. RetroCalc’s ASHRAE Level II-compliant outputs have been vetted and approved by National Grid and Eversource for use in Massachusetts multifamily rebate programs, making it a trusted tool for lenders and government agencies.
+---
 
-The purpose of this report is to provide the reader with an understanding of the back-end model or energy engine of RetroCalc. The engine is the part of RetroCalc that does all of the number crunching in order to model a building’s existing conditions and, subsequently, the energy conservation measures (ECMs) recommended. This is the backbone that make it possible to understand the energy and utility implications of building efficiency and electrification retrofits.
+## What you can do with it
 
-## Key Features
+- 📊 **Historical Energy Analysis (HEA)** — regress utility bills against degree days to split a building's actual use into heating / cooling / DHW / base load, per fuel.
+- 🏗️  **Level 2 model** — compute monthly space heating, cooling, DHW, lighting, equipment, fans, pumps, and appliance energy from component-level inputs (ASHRAE Level 2 depth).
+- 🔁 **Calibrate** the model to real utility bills to tune mechanical efficiencies and schedules.
+- 🧪 **Model ECMs and Packages** — define Energy Conservation Measures (efficiency upgrades, equipment swaps, setpoint changes, insulation, etc.) and see cumulative savings across electricity, gas, oil, propane, water, cost, and CO₂.
+- 📑 **Define ECMs entirely in Excel** — no MATLAB code required to author measures. Drop-in template with Excel dropdowns included.
+- 📤 **Export** per-ECM Level 2 breakdowns to a single Excel workbook for QC or deliverable-ready savings tables.
 
-RetroCalc strikes the right balance between rigorous analysis and ease of use by focusing on the key components that impact energy use and costs in multifamily retrofits. Developed to meet the needs identified during NEI’s energy auditing and decarbonization process (Figure 1), RetroCalc has always been designed with the needs of TA providers in mind.
+---
 
-### Historical Utility Analysis and Model Calibration
+## Installation
 
-RetroCalc starts with a historical energy analysis (HEA) that generates a profile of a building’s current energy and water use, broken down by end uses. This analysis can be used on its own or as the baseline for calibrating the building’s model. The model is built using field-collected data and incorporates key factors, such as solar gain and internal heat sources, to ensure accurate results. The calibration process then adjusts factors like mechanical system efficiency and occupancy behavior based on the HEA baseline to create a fully calibrated model.
+### Requirements
 
-### Water Modeling
+| | |
+|---|---|
+| **MATLAB** | R2022b or later. Recent features (e.g. `dictionary`) are used. |
+| **Toolboxes** | No extra toolboxes required for the HEA + Level 2 core. The weather / degree-day API calls use `webread` from base MATLAB. |
+| **OS** | Windows, macOS, or Linux (anything MATLAB runs on). |
 
-Unlike other tools, RetroCalc integrates water usage with energy modeling, recognizing their interdependence and offering more comprehensive savings projections. NEI has consistently found that reducing water usage not only lowers utility costs but also contributes to sustainability efforts, conserves resources, and improves overall building efficiency. By accounting for both energy and water savings, RetroCalc provides a more holistic view of potential cost reductions and environmental benefits.
+### Setup
 
-### ECM Modeling and Interactivity
+```bash
+git clone https://github.com/<org>/Retrocalc_openSource.git
+cd Retrocalc_openSource/RetroCalc
+```
 
-Current modeling tools are time-consuming when it comes to adjusting the order of implementation of energy conservation measures (ECMs), particularly when evaluating the interactive effects of different measures on HVAC performance and overall energy use. RetroCalc streamlines this process by enabling users to easily change the sequence of ECMs and quickly assess how these measures interact with one another. This flexibility allows for faster and more accurate modeling of the combined impacts on energy consumption, particularly in how HVAC systems respond to different conservation strategies. By simplifying this process, RetroCalc enhances the ability to identify the most effective combination of measures, improving energy efficiency while reducing modeling time and complexity.
+Then in MATLAB:
 
-### Zero-over-Time (ZoT) Planning Support
+1. Open `Retrocalc_openSource.prj` (double-click from File Explorer, or `openProject("Retrocalc_openSource.prj")` at the prompt). This adds `src/+ece`, `src/+util`, and `tests/+ecetest` to the path automatically.
+2. Confirm it loaded correctly:
+   ```matlab
+   methods(?ece.Site)      % should list ~20 Site methods
+   ```
 
-The ability to adjust the interactivity of energy conservation measures (ECMs) also enables detailed analysis of their implementation over time. This feature is crucial for buildings aiming to achieve decarbonization through a phased ZoT approach. It allows for the modeling of a gradual transition, assessing how different measures—such as energy efficiency upgrades and HVAC system adjustments—affect energy use and emissions reduction over extended periods. By simulating the impact of these measures implemented incrementally, RetroCalc supports ZoT planning. The analysis incorporates projected grid emissions and utility cost changes to ensure accuracy, while providing insights into the long-term performance and the cumulative effects of each step toward achieving net-zero emissions in building systems. This capability is essential for developing a realistic and cost-effective decarbonization strategy tailored to specific timelines and goals.
+### Optional — API keys for weather and solar data
 
-# Installation and Setup Guide
+Two features need API keys that you set as **environment variables before launching MATLAB**:
 
-1.  Install [MATLAB](https://www.mathworks.com/products/matlab.html) (R2022b or later)
-2.  Clone the RetroCalc GitHub repository to your local machine
-3.  Open the Retrocalc_openSource.prj file from within MATLAB. This will automatically set the project path and environment.
-5.  All the input files are kept in `..tests/testdata directory`. `buildingInputs.xlsx`contains the basic inputs to the building used in both Level 2 and the HEA. `buildingL2Inputs.xlsx` contains all the input to be used for the Level 2 portion of the code. `utilityInputs.xlsx` contains all the inputs from the utility meter data to be used for the HEA. `historicalDDInputs.xlsx` contains the degree days data to be used for the HEA portion of the code. The `weatherDataInputs.xlsx` should contain the TMY3/TMYx data for the location. Make sure the input templates of the excel files are followed.
-6.  The script `SiteFullRun.m` in `..sandbox/runScripts/` contains the code to run the HEA and the L2 scripts. Modify the paths accordingly.
+| Variable | Used by | Where to get it |
+|---|---|---|
+| `DEGREEDAYS_ACCOUNT_KEY` | Pulling historical HDD/CDD from the degreedays.net API | Free account at [degreedays.net](https://www.degreedays.net/api) |
+| `DEGREEDAYS_SECURITY_KEY` | Same | Same |
+| `NREL_API_KEY` | Fetching PVWatts solar/weather for Level 2 solar gains | Free, instant at [developer.nrel.gov/signup](https://developer.nrel.gov/signup/) |
 
-# Architecture
+**Windows**: open `cmd` and run `setx NREL_API_KEY "your-key"` (same for the two degreedays vars), then **restart MATLAB** so it picks up the new variables.
+**macOS / Linux**: `export NREL_API_KEY="your-key"` in `~/.zshrc` or `~/.bashrc`, then open a new shell / restart MATLAB.
 
-This software is written in MATLAB and uses a modular, object-oriented architecture in MATLAB. RetroCalc is designed to model the energy and water usage of a building based upon the energy flows through each building component and their system interactions. Each building system, e.g., space conditioning, ventilation, water heating, and appliances, is modeled as a distinct class, making the framework highly extensible, testable, and maintainable.
+Without the degreedays keys, you can still load HDD/CDD from an Excel file manually. Without the NREL key, Level 2 will log a warning and fall back to zero solar gain per window.
 
-### How it works
+---
 
-Retrocalc uses Excel input files to gather building information, utility history, and system details, which are then processed through MATLAB classes to model energy and water usage. The tool matches each building to a nearby weather station using city and state inputs, applies climate-appropriate assumptions, and calibrates results against actual utility bills. Outputs include detailed baseline usage, retrofit savings estimates, and projections for cost, carbon, and electrification impacts—making it practical for large-scale multifamily decarbonization planning.
+## Quick start — 10-line full run
 
-## Application Data Flow
+A minimal end-to-end run on the bundled test data:
 
-From the user perspective, there are discrete steps throughout the process of using RetroCalc where data is entered and interacted with. The flow of this process can be seen in the [RetroCalc Flowchart](retroCalcFlowchart.pdf), where the orange bubbles signify data entry points for building characteristics, and green rhombuses show user interaction. The user starts by completing a historical energy analysis (HEA) by entering basic building characteristics and utility data. This HEA is then calibrated to the level 2 model that the user creates from detailed takeoffs of a building. After the model has been calibrated, the user defines the ECMs to model and calculate energy and carbon savings. These ECMs are packaged together and then output as results that can be incorporated into a decarbonization plan. The data structure created to organize the back-end of RetroCalc’s engine has been developed with this high-level user context in mind.
+```matlab
+%% Build a Site from Excel input files
+site = ece.Site.fromInputExcelFiles( ...
+    "BuildingPath",       fullfile(ecetest.testDataRoot, "buildingInputs.xlsx"), ...
+    "UtilityPath",        fullfile(ecetest.testDataRoot, "utilityInputs1.xlsx"), ...
+    "HistDDPath",         fullfile(ecetest.testDataRoot, "historicalDDInputs.xlsx"), ...
+    "WeatherDataPath",    fullfile(ecetest.testDataRoot, "weatherDataInputs.xlsx"), ...
+    "SiteInputsDataPath", fullfile(ecetest.testDataRoot, "siteInputs.xlsx"));
 
-## Data Structure
+%% HEA — split bills into end uses, per building, per fuel
+site.computeBuildingUtilityUsages();
+site.computeHEA();
 
-Buildings are complex systems with many interrelated components. How these components function within the context of their building determines the overall energy and carbon outcomes. To properly organize and track the interactions between a building’s different components RetroCalc uses classes that define the objects of a building. This is a traditional object-oriented programming approach. The [RetroCalc unified modeling language (UML) diagram](retroCalcUML.pdf) that visually represents this system provides the full details of all data flow and entry. Below we will define the different classes and their interactions to give them greater context.
+%% Level 2 — compute an engineering model on Building 1
+site.Buildings(1).importLevel2ObjectData( ...
+    fullfile(ecetest.testDataRoot, "buildingL2Inputs.xlsx"));
+site.Buildings(1).computeLevel2();
 
-### Site Class
+%% Look at results
+disp(site.Buildings(1).HEA.ResultsTable);     % billing-derived
+disp(site.Buildings(1).Level2.ResultsTable);  % engineering model
+disp(site.Buildings(1).UsageComparisonTable); % side-by-side calibration view
+```
 
-The site class exists in order to aggregate energy data from multiple buildings and properly apportion utilities that serve multiple buildings. This is an important capability in larger developments that contain multiple buildings and could have a central mechanical room. The class contains the location of the site and manages the HEA and level 2 Class (level2Calc). The site is managed by the analysis class.
+Phases 1–3 above are the first half of **[`sandbox/runScripts/SiteFullRun.m`](sandbox/runScripts/SiteFullRun.m)** — a bundled end-to-end script that also runs calibration (Phase 4), applies the example ECM Packages (Phase 5), and exports a per-ECM diagnostics workbook. Run it directly to exercise the whole pipeline on the test data.
 
-### Analysis Class
+---
 
-The analysis class manages site objects whether there is one or multiple, and it exists to organize and validate energy data.
+## The workflow
 
-### Utility Class
+A full retrofit analysis is five phases. Each one maps to one or two method calls:
 
-This organizes the utility data input by the user. These different energy sources for the use of gas, water, and electricity are then used by HEA for analysis and then model calibration.
+### 1️⃣ Load the building
 
-### HEA Class
+Four or five Excel files describe the building: site geometry, utility bills, historical degree-days, weather (TMY3/TMYx), and the component-level Level 2 takeoff.
 
-This class allows for the historical energy analysis to be completed which is then used for calibration of the level 2 model. The HEA is passed through the Building class and to the level 2 class for calibration. HEA is able to calculate the total energy consumption, efficiency metrics, and carbon emissions.
+| File | Contents |
+|---|---|
+| `buildingInputs.xlsx` | One row per building: area, units, year built, orientation, climate. |
+| `utilityInputs.xlsx` | One sheet per meter, one row per billing period. |
+| `historicalDDInputs.xlsx` | Daily HDD65 / CDD70 history. |
+| `weatherDataInputs.xlsx` | TMY3 / TMYx hourly weather for the site. |
+| `buildingL2Inputs.xlsx` | Level 2 takeoff: walls, windows, HVAC, DHW, appliances, fixtures, spaces, pumps, fans. |
 
-### Building Class
+Template copies of all five live in `tests/testdata/`. Open them to see the exact column names and sheet layouts expected.
 
-The building class is a central artery within RetroCalc communicates the information between a large variety of classes that describe the different systems that make up a building. The building class focuses on a single structure within a site. The classes that Building obtains energy information from include the following with some examples of objects in those classes:
+### 2️⃣ Historical Energy Analysis (HEA)
 
--   Appliances \| Refrigerator, Stove, Washer, Dryer
--   Spaces \| Residential, Hallway, Stairwell
--   Ventilation \| Exhaust fans, Energy recovery ventilator
--   OpaqueSurfaces \| Insulated walls, Roof
--   Glazing \| Double-pane windows
--   SlabOnGrade \| Concrete slab with no basement
--   BelowGradeSurfaces \| basement walls
--   PlumbingFixtures \| Shower head, Kitchen sink faucet
--   DHWpipesMechRoom \| Domestic hot water piping within the mechanical room
--   DHWtanks \| Domestic hot water tank
--   DHWsystems \| Domestic hot water boiler
--   Fans \| Bath exhaust fan
--   Pumps \| Heating circulator pumps
--   Heating \| Boiler, heat pump
--   Cooling \| Air-conditioner
+Regresses monthly billing data against degree-days to split actual use into heating / cooling / DHW / base load, per fuel. Weather-normalizes so results from different years are comparable.
 
-These classes will be further detailed below and their data is input by the user from building takeoffs.
+```matlab
+site.computeBuildingUtilityUsages();
+site.computeHEA();
+site.Buildings(1).HEA.ResultsTable       % per-fuel totals, costs, CO₂
+site.Buildings(1).AnnualElectricUsageTable  % end-use split with annual and per-year rows
+```
+
+### 3️⃣ Level 2 engineering model
+
+Builds a component-by-component monthly energy balance using the ISO 52016 / ASHRAE 90.1 heat-loss and utilization-factor method.
+
+```matlab
+site.Buildings(1).importLevel2ObjectData("buildingL2Inputs.xlsx");
+site.Buildings(1).computeLevel2();
+site.Buildings(1).Level2.ResultsTable
+```
+
+### 4️⃣ Calibrate
 
-### Appliances Class
+The calibration view shows HEA vs Level 2 side-by-side with per-metric deltas. Tune Level 2 inputs (mechanical efficiencies, DHW use per person, lighting hours) until the deltas are within ASHRAE Guideline 14's ±5% annual tolerance.
+
+```matlab
+disp(site.Buildings(1).UsageComparisonTable)
+```
+
+### 5️⃣ Apply ECMs and Packages
 
-The Appliances class represents energy-consuming devices within a Building, such as refrigerators, ovens, and washing machines. This class is necessary for tracking energy use from household or commercial devices, contributing to overall electricity consumption calculations.
+This is where RetroCalc's modular design pays off: **define measures in Excel, apply with one line of MATLAB**, see cumulative savings across electricity, gas, oil, propane, water, cost, and CO₂.
 
-### Spaces Class
+See the next section.
 
-The Spaces class represents the unique areas inside of a building and their associated typical occupant usage profiles. These spaces have their own properties for conditioning setpoints, lighting, etc.
+---
 
-### Ventilation Class
+## 🧪 Defining ECMs and Packages in Excel (new!)
 
-The Ventilation class describes the airflow systems that regulate indoor air quality. This class measures the monthly average flow of the ventilation, to be used in the building class.
+You do **not** need to write MATLAB code to author measures. Open `examples/example_ECM_Package.xlsx`, edit with Excel's built-in dropdowns, close the file, then:
 
-### OpaqueSurfaces Class
+```matlab
+pkgs = util.applyPackagesFromWorkbook(site.Buildings(1), ...
+            "examples/example_ECM_Package.xlsx");
+site.Buildings(1).PackageSummaryTable    % per-package KeyResults deltas
+site.Buildings(1).ECMSummaryTables       % per-ECM breakdown within each Package
+```
 
-The OpaqueSurfaces class models non-transparent building elements, such as walls and roofs. It is composed within Building and plays a crucial role in thermal insulation and heat retention.
+The template ships with:
+- 📋 **Instructions sheet** — column reference, FilterCriteria DSL, Insert DSL, troubleshooting
+- 🗂️  **Packages sheet** — one row per `(Package, step)` — define which ECMs run in which order
+- 🔧 **10 example ECM sheets** covering every operation pattern (update/add/multiply/replace, insert, delete, enum changes, indexed-array edits, filter-by-property, filter-by-index)
+- 🎚️  **Four dropdowns per ECM sheet**: Operation, ObjectOfReference, PropertyToChange (auto-updates to show only the chosen class's properties), UpdateType
+- 💡 **Labeled indexed entries** — `HeatCoolSetpoints(1) — HtgTP1 (day)` lets you target one element of a 1×6 array without replacing the whole vector
 
-### Glazing Class
+⚠️ **Close the workbook in Excel before running MATLAB.** Excel holds a file lock on an open workbook and `readtable` will error with "file is in use."
 
-The Glazing class represents transparent building elements like windows and glass facades. It is managed by the Building class, contributing to daylighting and heat gain calculations.
+**Full guide**: [`documentation/ECM_Package_Workbook_Guide.md`](documentation/ECM_Package_Workbook_Guide.md)
+**Every property on every class, every enum member**: [`documentation/ECM_Property_Reference.md`](documentation/ECM_Property_Reference.md)
 
-### SlabOnGrade Class
+---
 
-The SlabOnGrade class models floor surfaces that are in direct contact with the ground. It is passed up to Building and ensures that heat transfer through the floor is accounted for in thermal modeling.
+## Export results to Excel
 
-### BGSurfaces Class
+One call to dump the full Level 2 intermediate breakdown + per-ECM savings into a single workbook:
 
-The below grade surfaces class contains information about any basement walls, their insulation, and soil composition, to pass back to the Building class.
+```matlab
+site.Buildings(1).exportResultTables("output.xlsx");         % base Level 2
+site.Buildings(1).exportECMDiagnostics("diagnostics.xlsx");  % per-ECM detail
+```
 
-### PlumbingFixtures Class
+`exportECMDiagnostics` writes one sheet per `(Package, ECM)` state with twelve stacked tables including monthly space-heating / cooling / DHW / electric end-use breakdowns, heat-loss components, solar gains by window, and a KeyResults summary. Useful when you need to justify where an ECM's savings came from.
 
-The PlumbingFixtures class includes components such as sinks, toilets, and showers. It is composed within Building and acts as an interface for these fixtures. This class is necessary for tracking water consumption and estimating energy use for heating water.
+---
 
-### DHWpipesMechRoom Class
+## Repository layout
 
-This class specifies the DHW piping systems in the buildings mechanical room. The class is essential for modeling heat loss in hot water distribution and optimizing insulation strategies.
+```
+RetroCalc/
+├── src/
+│   ├── +ece/              # Core calculation engine (classes)
+│   │   ├── @Site/           Top-level container; owns Buildings + utility meters
+│   │   ├── @Building/       The central modeling object — all compute methods live here
+│   │   ├── @HeatCool/       Heating/cooling systems
+│   │   ├── @DHWsystem/      Water heaters
+│   │   ├── @Appliance/      Stoves, dryers, dishwashers, fridges, custom
+│   │   ├── @Glazing/        Windows, skylights
+│   │   ├── @OpaqueSurface/  Walls, roofs
+│   │   ├── @Package/        Ordered collections of ECMs
+│   │   ├── @ECM/            Energy Conservation Measures
+│   │   ├── @MeasureComponent/  Individual measure actions
+│   │   ├── @KeyResults/     Result container (per-fuel energy, cost, CO₂)
+│   │   ├── @Reference/      Static lookup tables (appliance data, HVAC curves)
+│   │   └── +enum/           ApplianceType, SystemType, FuelType, …
+│   └── +util/             # Small helpers: Excel ECM import, endpoint overrides, etc.
+├── tests/
+│   ├── testdata/            Template Excel files + a loaded_session.mat
+│   ├── +ecetest/            Shared test fixtures (ecetest.testDataRoot)
+│   ├── ECMPackage/          Example ECMs saved as .mat
+│   └── Test*.m              Unit tests
+├── examples/
+│   ├── example_ECM_Package.xlsx   The Excel-ECM template referenced above
+│   └── _build_example_ECM_workbook.py   Regenerator for that workbook
+├── documentation/
+│   ├── ECM_Package_Workbook_Guide.md    User guide for the Excel ECM workflow
+│   ├── ECM_Property_Reference.md        Every editable property on every target class
+│   ├── TECHNICAL_REFERENCE.md           Backend architecture deep-dive (for devs)
+│   └── RetroCalc_User_Manual_v1.2.pdf   Full UI manual (also applies to the backend)
+├── sandbox/runScripts/
+│   ├── SiteFullRun.m          Full pipeline (HEA → L2 → calibrate → ECMs → export)
+│   ├── SitePartialUtilitiesRun.m
+│   └── SiteSetupExample.m
+└── Retrocalc_openSource.prj # MATLAB project file — open this first
+```
 
-### DHWtanks Class
+Only two folders are meant to be edited by a user: `tests/testdata/` (copy templates, swap in your project data) and `examples/` (edit the ECM workbook).
 
-The DHWtanks class includes information about the water storage tanks used in domestic hot water systems within a building. The purpose of the class is to evaluate energy storage efficiency and system sizing.
+---
 
-### DHWsystems Class
+## Documentation
 
-The DHWsystems class represents both the potable water system in a building. It includes hot and cold water and is crucial for calculating water heating energy demand. It contains information about the water heating system and its efficiency.
+| Document | Audience | What it covers |
+|---|---|---|
+| **[RetroCalc_User_Manual_v1.2.pdf](documentation/RetroCalc_User_Manual_v1.2.pdf)** | End users | Full workflow walkthrough. Mostly describes the UI build but every concept applies to the backend. |
+| **[ECM_Package_Workbook_Guide.md](documentation/ECM_Package_Workbook_Guide.md)** | ECM authors | Workbook schema, FilterCriteria DSL, Insert DSL, troubleshooting. |
+| **[ECM_Property_Reference.md](documentation/ECM_Property_Reference.md)** | ECM authors | Every editable property on every target class, labeled array indices, every enum's members. **Auto-generated from source.** |
+| **[TECHNICAL_REFERENCE.md](documentation/TECHNICAL_REFERENCE.md)** | Contributors | Class-by-class architecture, calculation algorithms, data structures. |
 
-### Fans Class
+---
 
-The Fans class models air circulation devices used within a building. This class is necessary for tracking energy consumption related to air movement and ensuring proper ventilation.
+## Example: full retrofit analysis end-to-end
 
-### Pumps Class
+**[`sandbox/runScripts/SiteFullRun.m`](sandbox/runScripts/SiteFullRun.m)** is the canonical copy. Open it in MATLAB and hit Run — you'll get:
 
-The Pumps class represents the fluid movement devices within a Building, which would be used for heating, cooling, and water distribution. This class is useful for understanding energy usage in fluid transport systems.
+- All five workflow phases above, in order
+- Console prints of `HEA.ResultsTable`, `Level2.ResultsTable`, `UsageComparisonTable`, `PackageSummaryTable`, and per-Package `ECMSummaryTables`
+- An `ECM_Diagnostics.xlsx` written to `%TEMP%\RetroCalc_output\` with one sheet per `(Package, ECM)` state, each stacking twelve breakdown tables so you can trace exactly where every kWh / therm / gallon / dollar came from and went
 
-### System Class
+Swap the five input paths at the top for your own project's Excel files to make it a real analysis.
 
-It is an interface class that includes the heating and cooling classes. These classes can’t exist independently, and therefore the system class unifies them into one class.
+---
 
-### Heating Class
+## Contributing
 
-The Heating class represents the heating system within a building. It is also implemented in the System class, ensuring it follows a standardized structure for climate control. This class is essential for modeling indoor heat distribution and energy consumption.
+Pull requests welcome. For architecture background, start with **[documentation/TECHNICAL_REFERENCE.md](documentation/TECHNICAL_REFERENCE.md)** — it walks through the class hierarchy, the compute pipeline, and the data structures that connect them.
 
-### Cooling Class
+Unit tests live under `tests/`. Run them with:
 
-The Cooling class represents the cooling system within a building. It is also implemented in the System class, maintaining the standardized structure. This class is necessary for assessing cooling loads and energy demand.
+```matlab
+runtests("tests/")
+```
 
-### References Class
+---
 
-The References Class serves as a data repository for storing and retrieving standard reference values used in benchmarking or validation processes. It ensures that predefined values or industry standards are accessible for calculations.
+## Credits & License
 
-### Weather Class
+Developed by [New Ecology, Inc.](https://newecology.org). ASHRAE Level 2-compliant outputs vetted and approved by **National Grid** and **Eversource** for use in Massachusetts multifamily rebate programs.
 
-The Weather class provides environmental data such as temperature, humidity, and solar radiation, which are crucial for energy modeling and performance analysis. It interacts with Building to adjust energy demand based on climate conditions.
+See [LICENSE.txt](LICENSE.txt) for licensing terms.
 
-### Solar Class
+---
 
-The Solar class models solar energy systems, including photovoltaic panels or solar water heating. It is essential for calculating renewable energy contributions to a building’s total energy consumption.
+## Troubleshooting quickies
 
-### Enumeration Classes
-
-The system includes several enumeration (enum) classes that define categorical values for various components. These enum classes improve data organization, enforce constraints, and facilitate consistency across system models.
-
--   **FuelType** specifies energy sources such as electricity, natural gas, or solar power, ensuring consistency across heating, cooling, and appliance models.
-
--   **VentilationType** categorizes airflow systems, distinguishing between mechanical, natural, or hybrid ventilation methods.
-
--   **WindowType** defines glazing characteristics, including single-pane, double-pane, or low-emissivity (Low-E) windows, crucial for thermal performance analysis.
-
--   **SurfaceType** differentiates between walls, roofs, and floors, providing a structured way to classify building envelope components.
-
--   **PumpType** and **FanType** categorize different mechanical systems used in HVAC and plumbing applications, helping define performance parameters based on standardized system types.
+| Symptom | Cause | Fix |
+|---|---|---|
+| `"file is in use"` when reading an Excel file | Workbook is still open in Excel | Close the workbook before running MATLAB |
+| `"API credentials not found in environment variables"` | Missing degreedays.net keys | See "API keys" section above — set `DEGREEDAYS_ACCOUNT_KEY` and `DEGREEDAYS_SECURITY_KEY`, restart MATLAB |
+| Solar gains all zero + HTTP 403 warning | Missing NREL API key | See "API keys" section — set `NREL_API_KEY`, restart MATLAB |
+| `ece:insufficientHistoricalDD` | Historical degree-day file doesn't cover enough years | Extend the file or lower `site.NumPastYearsToAverage` |
+| ECM runs but nothing changes in results | Operation or UpdateType typo in Excel workbook | Check MATLAB warnings — each skipped row names the sheet + row number |
+| `"openProject: ... not found"` | Not in the repo root | `cd` to the folder containing `Retrocalc_openSource.prj` |

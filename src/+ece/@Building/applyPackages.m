@@ -103,8 +103,6 @@ for packageIdx = 1:obj.NumPackages
     for ecmIdx = 1:(currentPackage.NumECMs)
         % Run Level 2 Calc on Building
         currentPackage.ECMBuildings(ecmIdx).computeLevel2();
-        disp(currentPackage.ResultBuilding.Level2.ResultsTable);
-        
     end %forloop (ecms)
 
 end %forloop (packages)
@@ -139,7 +137,6 @@ for packageIdx = 1:obj.NumPackages
     obj.PackageSummaryTable = obj.PackageSummaryTable(x,:);
 
 end %forloop
-
 
 
 %% Create ECM Summary Tables
@@ -178,7 +175,7 @@ for packageIdx = 1:obj.NumPackages
     % Iterate through each ECM
     for ecmIdx = 1:currentPackage.NumECMs
         % Get ECM and ECMBuilding Reference
-        currentECM = currentPackage.ECMs(ecmIdx);
+        %currentECM = currentPackage.ECMs(ecmIdx);
         currentECMBldg = currentPackage.ECMBuildings(ecmIdx);
 
         % Extract ECM Level2 Results Table
@@ -216,7 +213,66 @@ for packageIdx = 1:obj.NumPackages
         [currentPackage.ECMs.Description]',...
         'NewVariableNames',["Name","Description"],...
         'After',1);
-    
+
+    % VALUE ADJUSTMENT
+    % Store original variable names since varfun changes them.
+    origVarNames = ecmPkgTable.Properties.VariableNames;
+
+    %   At this point, the ECM summary table is computed such that positive
+    %   values represent COSTS and negative values represent SAVINGS. We
+    %   are going to negate these values to reverse this relations, so now
+    %   the table has SAVINGS = +Vals , and COSTS = -Vals.
+    % Apply negation to all rows that are numeric (4th to end)
+    negateCols = varfun(@(x) -x, ecmPkgTable,...
+        "InputVariables", ecmPkgTable.Properties.VariableNames(4:end));
+
+    % Overwrite the values in the original table with the negated values.
+    ecmPkgTable{:,4:end} = negateCols{:,:} + 0; % Trick to prevent display of -0.0 in tables.
+
+    % COLUMN ADJUSTMENT
+    % Remove Unit Cost Columns
+    ecmPkgTable.("Unit Cost of Electricity") = [];
+    ecmPkgTable.("Unit Cost of Gas") = [];
+    ecmPkgTable.("Unit Cost of Water") = [];
+    ecmPkgTable.("Unit Cost of Oil") = [];
+    ecmPkgTable.("Unit Cost of Propane") = [];
+
+    % ADD NEW COLUMNS (PERCENTAGE)
+    % Guard divisor against zero/empty/NaN — on degenerate buildings or
+    % unset utility rates the base can legitimately be 0 and the raw
+    % division silently produced Inf in the exported spreadsheet.
+    % EUI Percent
+    baseEUI = obj.PackageSummaryTable.Base(strcmp(obj.PackageSummaryTable.Property,"EUI"));
+    if isempty(baseEUI) || baseEUI == 0 || isnan(baseEUI)
+        euiPercent = NaN(size(ecmPkgTable.EUI));
+    else
+        euiPercent = ecmPkgTable.EUI ./ baseEUI * 100;
+    end
+    ecmPkgTable = addvars(ecmPkgTable,euiPercent,'After',"EUI",...
+        'NewVariableNames',"EUI (%)");
+
+    % Cost Percent
+    baseCost = obj.PackageSummaryTable.Base(strcmp(obj.PackageSummaryTable.Property,"Cost Total"));
+    if isempty(baseCost) || baseCost == 0 || isnan(baseCost)
+        costPercent = NaN(size(ecmPkgTable.("Cost Total")));
+    else
+        costPercent = ecmPkgTable.("Cost Total") ./ baseCost * 100;
+    end
+    ecmPkgTable = addvars(ecmPkgTable,costPercent,...
+        'After',"Cost Total",...
+        'NewVariableNames',"Cost Total (%)");
+
+    % Emission Percent
+    baseEmis = obj.PackageSummaryTable.Base(strcmp(obj.PackageSummaryTable.Property,"Emission Reduction (kgCO2e/ft2)"));
+    if isempty(baseEmis) || baseEmis == 0 || isnan(baseEmis)
+        emisReducePercent = NaN(size(ecmPkgTable.("Emission Reduction (kgCO2e/ft2)")));
+    else
+        emisReducePercent = ecmPkgTable.("Emission Reduction (kgCO2e/ft2)") ./ baseEmis * 100;
+    end
+    ecmPkgTable = addvars(ecmPkgTable,emisReducePercent,...
+        'After',"Emission Reduction (kgCO2e/ft2)",...
+        'NewVariableNames',"Emission Reduction (%)");
+
     % Store Completed Package Table in Cell
     obj.ECMSummaryTables{packageIdx,1} = ecmPkgTable;
 

@@ -35,6 +35,21 @@ end %argblock
 numMeters = length(gasMeters);
 numBuildings = length(bldgs);
 
+% creating empty tables for annual and monthly usage  in case no gas meters
+buildingUsageTbl = table('Size',[0, 8], ...
+        'VariableTypes',["string",repmat("double",1, 7)],...
+        'VariableNames',["Property", "MeterCount", "HDD65", "TotalTherms", ...
+        "StoveDryerTherms", "DHWTherms", "SpaceHeatTherms", "Cost"]);
+emptyRows = table("", 0, 0, 0, 0, 0, 0, 0, ...
+    'VariableNames', buildingUsageTbl.Properties.VariableNames);
+emptyRows = [emptyRows; emptyRows; emptyRows];  % duplicate for 2 rows
+buildingUsageTbl = [buildingUsageTbl; emptyRows];
+bldgMonthlyProfile = array2table([(1:12)', zeros(12,4)], ...
+    "VariableNames", ["Month", "StoveDryerTherms", "DHWTherms", "SpaceHeatTherms", "Total"]);
+
+%%Checking to see if number of gas meters is > 0 otherwise skip
+if numMeters > 0
+
 % Get average number of BRs for the building.
 % This is the total number of bedrooms divided by the number of dwelling
 % units.
@@ -116,10 +131,10 @@ end %for buildings gas use cooking/drying
 % Combine the gas drying usage for each building.
 % Vector of length = number of buildings. Annual therms.
 bldgsAnnualGasDryingUsage = ...
-    bldgsAnnualGasInUnitDryerUsage + bldgsAnnualGasCommonAreaDryerUsage;
+    bldgsAnnualGasInUnitDryerUsage + bldgsAnnualGasCommonAreaDryerUsage
 
 % Sum the total gas cooking and drying usage for each building.
-bldgsAnnualGasCookDryUsage = bldgsAnnualGasCookingUsage + bldgsAnnualGasDryingUsage;
+bldgsAnnualGasCookDryUsage = bldgsAnnualGasCookingUsage + bldgsAnnualGasDryingUsage
 
 %% Find cooking and drying  usage on each meter
 
@@ -578,6 +593,14 @@ for meterIdx = 1:numMeters
 
     % Convert years to average to number of days (sloppily, no leap years)
     numDaysToAvg = numYearsToAvg * 365;
+    if numDaysToAvg > height(ddTable)
+        error("ece:insufficientHistoricalDD", ...
+            "Historical degree-day table has %d rows, shorter than the " + ...
+            "requested %d-year averaging window (%d days). " + ...
+            "Reduce Site.NumPastYearsToAverage, or supply more years " + ...
+            "of degree-day data via Location.importHistoricalDDTable.", ...
+            height(ddTable), numYearsToAvg, numDaysToAvg);
+    end
     lastXYearsIndices = (height(ddTable)+1 - numDaysToAvg) : height(ddTable);
 
     % Obtain month values for the last x years in the dd table.
@@ -586,15 +609,20 @@ for meterIdx = 1:numMeters
     % Create heating mask for DD table.
     heatingMask = ismember(month(ddTable.Date), heatingMonths);
 
-    % Apply heating mask to zero out the corresponding HDDD values in DD table.
-    ddTable.HDD65(~heatingMask) = 0;
+    % Apply heating mask on a local copy of HDD, so per-meter mutation
+    % doesn't bleed into the next iteration of the meter loop. (Previously
+    % mutated ddTable.HDD65 directly, causing meter 2 to see meter 1's
+    % zeroed non-heating months when the two meters had different
+    % heating seasons.)
+    hdd = ddTable.HDD65;
+    hdd(~heatingMask) = 0;
 
     % Pull out Last X HDD/CDD for Correct Months
     %   The below line basically pulls the last 5 years of the corresponding
     %   column by index, but only those indexes that are marked acceptable by
     %   the corresponding mask, resulting in the last 5 years of results that
     %   fall in the appropriate months.
-    avgHDD = ddTable.HDD65(lastXYearsIndices);
+    avgHDD = hdd(lastXYearsIndices);
 
     % Compute Single-Year Average by dividing by number of years
     avgHDD = sum(avgHDD) / numYearsToAvg;
@@ -608,8 +636,11 @@ for meterIdx = 1:numMeters
     % Note, if there are any NaN's in the monthly table for space heat, the
     % sum of that column will be NaN, gasHeatAdj will be NaN, and calc will
     % fail.
-    gasHeatAdj = normAnnualHeating / sum(monthlyProfile(:, 4));
-    monthlyProfile(:, 4) = gasHeatAdj * monthlyProfile(:, 4);
+    heatColSum = sum(monthlyProfile(:, 4));
+    if heatColSum > 0
+        gasHeatAdj = normAnnualHeating / heatColSum;
+        monthlyProfile(:, 4) = gasHeatAdj * monthlyProfile(:, 4);
+    end
 
     % Get Total Normalized Gas Usage
     % Add up StoveDryer, DHWTherm, and SpaceHeat.
@@ -954,6 +985,12 @@ for bldgIdx = 1:numBuildings
 
 end % building loop line 421
 
-end %functionace
+else
+   bldgs(1).AnnualGasUsageTable = buildingUsageTbl; 
+   bldgs(1).MonthlyGasProfile = bldgMonthlyProfile;
+     
+
+end %if condition on number of gas meters
+end % function
 
 

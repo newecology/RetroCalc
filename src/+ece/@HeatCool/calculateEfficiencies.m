@@ -26,7 +26,7 @@ coolSysData = ece.Reference.CoolSysData;
 HeatEffUnits = obj.HeatEffUnits;
 HeatEff = obj.HeatEff;
 if (HeatEffUnits == ece.enum.HeatingEfficiencyUnits.ASHP_HSPF)
-        HeatEff = HeatEff / 3.413;
+        HeatEff = HeatEff / 3.412;
         HeatEffUnits = ece.enum.HeatingEfficiencyUnits.averageCOP;
 end %endif
 %% -- Convert Units for cooling Effs
@@ -40,7 +40,7 @@ isConvertableUnit = ismember(obj.CoolEffUnits,...
      ece.enum.CoolingEfficiencyUnits.SEER2,...
      ece.enum.CoolingEfficiencyUnits.IEER]);
 if isConvertableUnit
-     CoolEff = CoolEff / 3.413;
+     CoolEff = CoolEff / 3.412;
 end %endif
 
 % Convert any EER values in Btu/hour per Watt to COP. All cooling

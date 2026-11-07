@@ -12,10 +12,7 @@ classdef Appliance < handle & matlab.mixin.Copyable
         ApplianceType (1,1) ece.enum.ApplianceType = ...
             ece.enum.ApplianceType.InUnitGasStoves;
 
-        % ApplianceCategory: Enum member to specify appliance category
-        % type, derived from the Appliance Type. General version of Type.
-        ApplianceCategory (1,1) ece.enum.ApplianceCategory = ...
-            ece.enum.ApplianceCategory.Stove;                
+               
 
         % SubType: Additional description used for refrigerators and 
         % clothes dryers. i.e. front or top loading. Selection depends on
@@ -29,11 +26,35 @@ classdef Appliance < handle & matlab.mixin.Copyable
         % Quantity: How many of this type of appliance exists.
         Quantity (1,1) double = 0;
                 
-        % FracUnitsServed: Fraction of dwelling units served. 
-        %   EX: If half the dryers are electric and half are gas, the 
-        % option to define two instances with fraction of dwelling units 
+        % FracUnitsServed: Fraction of dwelling units served.
+        %   EX: If half the dryers are electric and half are gas, the
+        % option to define two instances with fraction of dwelling units
         % served by each.
         FracUnitsServed (1,1) double = 0;
+
+        % UserAnnual_kWh: User-supplied annual electricity use (kWh/year)
+        % per appliance. Only used when ApplianceType == CustomAppliance.
+        % Can be zero (e.g., a gas-only custom appliance).
+        UserAnnual_kWh (1,1) double = 0;
+
+        % UserAnnual_therms: User-supplied annual gas use (therms/year)
+        % per appliance. Only used when ApplianceType == CustomAppliance.
+        % Can be zero (e.g., an electric-only custom appliance).
+        UserAnnual_therms (1,1) double = 0;
+
+        % SensibleGainFrac: Fraction of total energy use (converted to
+        % kBtu) that becomes sensible internal gain in conditioned space.
+        % Default 0.9 assumes an electric appliance located in the
+        % conditioned space (nearly all input becomes sensible heat).
+        % Gas in-space unvented ~0.4; any vented appliance ~0.05.
+        % Only used when ApplianceType == CustomAppliance.
+        SensibleGainFrac (1,1) double = 0.9;
+
+        % LatentGainFrac: Fraction of total energy use (converted to
+        % kBtu) that becomes latent internal gain (moisture). Default 0
+        % assumes electric. Gas in-space unvented ~0.3; vented ~0.
+        % Only used when ApplianceType == CustomAppliance.
+        LatentGainFrac (1,1) double = 0.0;
 
     end %properties (Public)
 
@@ -50,18 +71,24 @@ classdef Appliance < handle & matlab.mixin.Copyable
         % metric of efficiency correlates to.
         EffLevelDescriptor (1,1) string
 
+                % ApplianceCategory: Enum member to specify appliance category
+        % type, derived from the Appliance Type. General version of Type.
+        ApplianceCategory (1,1) ece.enum.ApplianceCategory 
+
     end %properties (Dependent)
 
   
-    properties %(SetAccess = private, GetAccess = public)
-        % -- Define Read-Only Properties
+    properties (SetAccess = {?ece.Appliance, ?ece.Building}, GetAccess = public)
+        % -- Define Read-Only-From-Outside Properties
         % results array for energy use and internal gains of each appliance
         % row 1 gas use therms. row 2 electric use kWh
         % row 3 sensible internal gains kBtu. row 4 latent internal gains
-        % kBtu. 12 months then annual total
-        resultsArray (4,13) double
+        % kBtu. 12 months then annual total.
+        % Populated by ece.Building.calculateApplianceElectricAndGasUse —
+        % hence the restricted SetAccess that permits Building methods
+        % to write while blocking generic external assignment.
+        resultsArray (4,13) double = zeros(4,13)
 
-       
     end %properties (Read-Only)
 
 
@@ -72,6 +99,41 @@ classdef Appliance < handle & matlab.mixin.Copyable
             %   Construct an instance of this class.
 
         end %function (constructor)
+
+        % Method to derive Appliance category from type
+        function value = get.ApplianceCategory(obj)
+         switch obj.ApplianceType
+           case {ece.enum.ApplianceType.InUnitGasStoves, ...
+              ece.enum.ApplianceType.InUnitElectricStoves, ...
+              ece.enum.ApplianceType.CommercialOvenElectric, ...
+              ece.enum.ApplianceType.CommercialGriddleElectric}
+            value = ece.enum.ApplianceCategory.Stove;
+
+           case {ece.enum.ApplianceType.InUnitDishwashers, ...
+              ece.enum.ApplianceType.CommercialDishwashers}
+            value = ece.enum.ApplianceCategory.Dishwasher;
+
+           case {ece.enum.ApplianceType.InUnitClotheswashers, ...
+              ece.enum.ApplianceType.CommonAreaClotheswashers}
+            value = ece.enum.ApplianceCategory.Clotheswasher;
+
+           case {ece.enum.ApplianceType.InUnitGasClothesDryers, ...
+              ece.enum.ApplianceType.InUnitElectricClothesDryers, ...
+              ece.enum.ApplianceType.CommonAreaGasClothesDryers, ...
+              ece.enum.ApplianceType.CommonAreaElectricClothesDryers}
+            value = ece.enum.ApplianceCategory.Dryer;
+
+           case ece.enum.ApplianceType.Refrigerators
+            value = ece.enum.ApplianceCategory.Refrigerator;
+
+           case ece.enum.ApplianceType.CustomAppliance
+            value = ece.enum.ApplianceCategory.Custom;
+
+           otherwise
+            value = ece.enum.ApplianceCategory.None;
+         end
+        end
+
 
         function value = get.SelectableSubtypes(obj)
             % Getter for SelectableSubtypes.
@@ -122,19 +184,23 @@ classdef Appliance < handle & matlab.mixin.Copyable
             % Determine if appliance type is fridge.
             isRefrigerator = (obj.ApplianceType == ...
                 ece.enum.ApplianceType.Refrigerators);
+            isCustom = (obj.ApplianceType == ...
+                ece.enum.ApplianceType.CustomAppliance);
 
             if isRefrigerator
                 % Refrigerators --> volume in cubic feet.
                 value = "volume_ft3";
-
+            elseif isCustom
+                % Custom --> efficiency level is not used; user supplies
+                % absolute kWh/therms directly on the object.
+                value = "n/a (user-rated)";
             else
                 % All Else --> Energy Star Rating
                 value = "1 standard, 2 Energy Star";
-
             end %endif
 
         end %function (Getter)
-     
+
         function value = get.Code(obj)
             % Getter for Code property.
             %   The Code property is used to help define how a particular

@@ -8,7 +8,8 @@ classdef ApplianceCategory < ece.enum.BaseList
         Clotheswasher ("Clotheswasher")
         Dryer ("Dryer")
         Refrigerator ("Refrigerator")
-        None ("None")        
+        Custom ("Custom")
+        None ("None")
     end % enumeration
 
     % Static Methods
