@@ -215,6 +215,11 @@ site.Buildings(1).computeLevel2();
 %% 3. Apply the Excel-defined packages.
 packages = util.applyPackagesFromWorkbook(site.Buildings(1), 'MyECMs.xlsx');
 
+%% Or, for mutually-exclusive alternative packages you want to compare
+%% against the same baseline (no chaining):
+packages = util.applyPackagesFromWorkbook(site.Buildings(1), 'MyECMs.xlsx', ...
+               ApplyMethod="NonInteractive");
+
 %% 4. Inspect results.
 site.Buildings(1).PackageSummaryTable         % per-package KeyResults deltas
 site.Buildings(1).ECMSummaryTables            % per-ECM-within-package deltas
@@ -241,6 +246,25 @@ bldg.applyPackages();          % defaults to Interactive sequential apply
 Note: `bldg.applyPackages(...)` takes an `ece.enum.ApplyPackageMethod`
 value as its only argument (`Interactive` or `NonInteractive`), **not**
 a package array — the packages are read off `bldg.Packages`.
+
+### ApplyMethod — Interactive vs NonInteractive
+
+When a workbook defines two or more Packages, the apply method controls
+how they combine:
+
+| Mode | Behavior | Typical use |
+|---|---|---|
+| `Interactive` (default) | Packages chain. Package *k* starts from Package *k-1*'s result. Measures compound across packages. | "These retrofits implement in a planned sequence; I want cumulative savings." |
+| `NonInteractive` | Every package is applied independently to a fresh copy of the base building. Packages don't see each other. | "These are mutually-exclusive alternatives (e.g. 'all-electric path' vs 'gas tune-up path'); compare them side-by-side against the same baseline." |
+
+ECMs *within* a package always chain — the apply method only affects
+how packages themselves combine.
+
+Pass via the name-value argument:
+```matlab
+util.applyPackagesFromWorkbook(bldg, file)                            % Interactive
+util.applyPackagesFromWorkbook(bldg, file, ApplyMethod="NonInteractive")
+```
 
 ---
 

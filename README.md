@@ -156,11 +156,19 @@ See the next section.
 You do **not** need to write MATLAB code to author measures. Open `examples/example_ECM_Package.xlsx`, edit with Excel's built-in dropdowns, close the file, then:
 
 ```matlab
+% Default — packages chain (Interactive): package k starts from package k-1's result.
 pkgs = util.applyPackagesFromWorkbook(site.Buildings(1), ...
             "examples/example_ECM_Package.xlsx");
+
+% Alternative — compare mutually-exclusive packages against the same baseline.
+pkgs = util.applyPackagesFromWorkbook(site.Buildings(1), ...
+            "examples/example_ECM_Package.xlsx", ApplyMethod="NonInteractive");
+
 site.Buildings(1).PackageSummaryTable    % per-package KeyResults deltas
 site.Buildings(1).ECMSummaryTables       % per-ECM breakdown within each Package
 ```
+
+**ApplyMethod** controls how multiple Packages combine. `Interactive` (default) chains them — useful for a planned retrofit sequence where each phase builds on the last. `NonInteractive` applies every Package independently to a fresh copy of the base building — useful when the Packages are mutually-exclusive alternatives you want to compare side-by-side. ECMs *within* a package always chain either way.
 
 The template ships with:
 -  **Instructions sheet** — column reference, FilterCriteria DSL, Insert DSL, troubleshooting
