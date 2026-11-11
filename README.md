@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/license-see%20LICENSE.txt-lightgrey)
 ![ASHRAE](https://img.shields.io/badge/ASHRAE-Level%202-brightgreen)
 
-This is the **open-source backend** of RetroCalc. There is also a desktop UI build distributed separately; this repo is the engine — everything the UI does is reachable from the MATLAB command line via a small number of well-documented classes and helpers.
+This is the **open-source backend** of RetroCalc. There is also a desktop UI build distributed separately; this repo is the engine and everything the UI does is reachable from the MATLAB command line via a small number of well-documented classes and helpers.
 
 ---
 
